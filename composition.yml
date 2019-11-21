@@ -1,4 +1,4 @@
-postgres_version: '9.5-35'
+postgresql_version: '9.5-35'
 zd_messaging_version: '20191119_1431'
 zd_opaa_version: '20191120_1628'
 zd_transaction_engine_version: '20191119_1430'

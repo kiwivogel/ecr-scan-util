@@ -1,21 +1,19 @@
 package aggregator
 
 import (
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
-
-	"fmt"
+	"strings"
 )
 
-var repositoryName = "zorgdomein/zd-opaa"
-var imageTag = "20191121_0946"
 var region = "eu-west-1"
 
-func BatchGetScanResults(repositories map[string]string) {
+func BatchGetScanResults(repositories map[interface{}]interface{}) {
 	for c, v := range repositories {
-		ecrGetTagScanResults(c, v)
+		ecrGetTagScanResults(strings.Join([]string{"zorgdomein/", strings.Replace(strings.Replace(c.(string), "_version", "", 1), "_", "-", -1)}, ""), v.(string))
 	}
 }
 

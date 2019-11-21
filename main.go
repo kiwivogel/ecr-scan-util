@@ -8,20 +8,19 @@ import (
 	"path/filepath"
 )
 
-type componentList struct {
-	Components map[string]string `yaml:Versions`
-}
-
 func main() {
 	filename, _ := filepath.Abs("./composition.yml")
 	yamlFile, err := ioutil.ReadFile(filename)
 
+	cl := make(map[interface{}]interface{})
+
 	if err != nil {
 		log.Printf("Failed to load %s, #%v", filename, err)
 	}
-	err = yaml.Unmarshal(yamlFile, components)
+	err = yaml.Unmarshal(yamlFile, cl)
 	if err != nil {
 		log.Fatalf("Unmarshal: %v", err)
 	}
-	aggregator.BatchGetScanResults(components)
+
+	aggregator.BatchGetScanResults(cl)
 }
