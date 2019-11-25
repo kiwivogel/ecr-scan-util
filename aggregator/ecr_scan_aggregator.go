@@ -13,11 +13,15 @@ var region = "eu-west-1"
 
 func BatchGetScanResults(repositories map[interface{}]interface{}) {
 	for c, v := range repositories {
-		ecrGetTagScanResults(strings.Join([]string{"zorgdomein/", strings.Replace(strings.Replace(c.(string), "_version", "", 1), "_", "-", -1)}, ""), v.(string))
+		result, err := EcrGetTagScanResults(strings.Join([]string{"zorgdomein/", strings.Replace(strings.Replace(c.(string), "_version", "", 1), "_", "-", -1)}, ""), v.(string))
+		if err != nil {
+			return
+		}
+		fmt.Println(result)
 	}
 }
 
-func ecrGetTagScanResults(repositoryName string, imageTag string) {
+func EcrGetTagScanResults(repositoryName string, imageTag string) (findings *ecr.DescribeImageScanFindingsOutput, err error) {
 	s := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	}))
@@ -49,5 +53,5 @@ func ecrGetTagScanResults(repositoryName string, imageTag string) {
 		return
 	}
 
-	fmt.Println(result)
+	return result, nil
 }
