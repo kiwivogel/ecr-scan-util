@@ -11,26 +11,47 @@ import (
 
 var region = "eu-west-1"
 
-func BatchGetScanResults(repositories map[interface{}]interface{}) {
+func BatchGetScanResultsByTag(repositories map[string]string, registryId string) (result map[string]*ecr.DescribeImageScanFindingsOutput, err error) {
 	for c, v := range repositories {
-		result, err := EcrGetTagScanResults(strings.Join([]string{"zorgdomein/", strings.Replace(strings.Replace(c.(string), "_version", "", 1), "_", "-", -1)}, ""), v.(string))
+
+		result[c], err = EcrGetScanResultsByTag(strings.Join([]string{"zorgdomein/", strings.Replace(strings.Replace(c, "_version", "", 1), "_", "-", -1)}, ""), v, registryId)
 		if err != nil {
-			return
+			return nil, err
 		}
-		fmt.Println(result)
 	}
+	return result, err
 }
 
-func EcrGetTagScanResults(repositoryName string, imageTag string) (findings *ecr.DescribeImageScanFindingsOutput, err error) {
+func createImageScanFindingsInput(repositoryName string, imageTag string, registryId string) (input *ecr.DescribeImageScanFindingsInput, err error) {
+	if registryId == "" {
+		input = &ecr.DescribeImageScanFindingsInput{
+			RepositoryName: aws.String(repositoryName),
+			ImageId: &ecr.ImageIdentifier{
+				ImageTag: aws.String(imageTag),
+			},
+			MaxResults: aws.Int64(1000), //to avoid paginated results with more than 100 but less than 1000 results.
+		}
+	} else {
+		input = &ecr.DescribeImageScanFindingsInput{
+			RepositoryName: aws.String(repositoryName),
+			RegistryId:     aws.String(registryId),
+			ImageId: &ecr.ImageIdentifier{
+				ImageTag: aws.String(imageTag),
+			},
+			MaxResults: aws.Int64(1000), //to avoid paginated results with more than 100 but less than 1000 results.
+		}
+	}
+	return input, err
+}
+
+func EcrGetScanResultsByTag(repositoryName string, imageTag string, registryId string) (findings *ecr.DescribeImageScanFindingsOutput, err error) {
 	s := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	}))
 	svc := ecr.New(s)
-	input := &ecr.DescribeImageScanFindingsInput{
-		RepositoryName: aws.String(repositoryName),
-		ImageId: &ecr.ImageIdentifier{
-			ImageTag: aws.String(imageTag),
-		},
+	input, err := createImageScanFindingsInput(repositoryName, imageTag, registryId)
+	if err != nil {
+		fmt.Println(err.Error())
 	}
 	result, err := svc.DescribeImageScanFindings(input)
 	if err != nil {
@@ -52,6 +73,5 @@ func EcrGetTagScanResults(repositoryName string, imageTag string) (findings *ecr
 		}
 		return
 	}
-
 	return result, nil
 }

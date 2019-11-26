@@ -9,7 +9,7 @@ import (
 func NewTestSuite(component string, findings ecr.ImageScanFindings) (testSuite reporters.JUnitTestSuite, err error) {
 	var failures int = int(*findings.FindingSeverityCounts["CRITICAL"])
 	testSuite = reporters.JUnitTestSuite{
-		XMLName:   xml.Name{component, nil},
+		XMLName:   xml.Name{component, "bla"},
 		TestCases: nil,
 		Name:      component,
 		Tests:     len(findings.Findings),
