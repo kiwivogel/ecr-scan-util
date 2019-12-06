@@ -16,7 +16,7 @@ type VulnerabilityReport struct {
 	PackageVersion string
 }
 
-func extractPackageAttributes(query string, finding *ecr.ImageScanFinding) (attribute string, err error) {
+func ExtractPackageAttributes(query string, finding *ecr.ImageScanFinding) (attribute string, err error) {
 	for a := range finding.Attributes {
 		if *finding.Attributes[a].Key == query {
 			attribute = *finding.Attributes[a].Value
@@ -31,8 +31,8 @@ func extractPackageAttributes(query string, finding *ecr.ImageScanFinding) (attr
 }
 
 func CreateNewVulnerabilityReport(imageName string, imageTag string, finding *ecr.ImageScanFinding) (findingReport VulnerabilityReport, err error) {
-	packageName, err := extractPackageAttributes("package_name", finding)
-	packageVersion, err := extractPackageAttributes("package_version", finding)
+	packageName, err := ExtractPackageAttributes("package_name", finding)
+	packageVersion, err := ExtractPackageAttributes("package_version", finding)
 	if err != nil {
 		return VulnerabilityReport{
 			Image:          imageName,

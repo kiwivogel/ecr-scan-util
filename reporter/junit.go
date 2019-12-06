@@ -19,11 +19,11 @@ func NewTestSuite(container string, cutoff string, findings ecr.ImageScanFinding
 		Name:      container,
 		Tests:     len(findings.Findings),
 		Failures:  failures,
-		Errors:    0,
+		Errors:    int(getSeverityCount("UNDEFINED", findings.FindingSeverityCounts)),
 		Time:      0,
 	}
 	for f := range findings.Findings {
-		testSuite.TestCases = append(testSuite.TestCases, createTestCase(container, cutoff, *findings.Findings[f]))
+		testSuite.TestCases = append(testSuite.TestCases, createTestCase(cutoff, *findings.Findings[f]))
 	}
 
 	return testSuite, err
@@ -70,12 +70,18 @@ func hasPassedCutoff(cutoff string, severity string) (passed bool) {
 
 }
 
-func createTestCase(container string, cutoff string, finding ecr.ImageScanFinding) (testCase reporters.JUnitTestCase) {
+func createTestCase(cutoff string, finding ecr.ImageScanFinding) (testCase reporters.JUnitTestCase) {
 	passed := hasPassedCutoff(cutoff, *finding.Severity)
+	packageName, err := ExtractPackageAttributes("package_name", &finding)
+	packageVersion, err := ExtractPackageAttributes("package_version", &finding)
+	packageString := fmt.Sprintf("%s@%s", packageName, packageVersion)
+	if err != nil {
+		panic(err)
+	}
 	if passed {
 		return reporters.JUnitTestCase{
 			Name:           *finding.Name,
-			ClassName:      container,
+			ClassName:      packageString,
 			PassedMessage:  newPassedMessage(*finding.Name, *finding.Severity, cutoff),
 			FailureMessage: nil,
 			Skipped:        nil,
@@ -85,7 +91,7 @@ func createTestCase(container string, cutoff string, finding ecr.ImageScanFindin
 	} else {
 		return reporters.JUnitTestCase{
 			Name:           *finding.Name,
-			ClassName:      container,
+			ClassName:      packageString,
 			PassedMessage:  nil,
 			FailureMessage: newFailedMessage(*finding.Name, *finding.Severity, cutoff, *finding.Description),
 			Skipped:        nil,

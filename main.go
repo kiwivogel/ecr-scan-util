@@ -19,19 +19,33 @@ import (
 type ReporterConfig struct {
 	reportFileName string
 	reporterType   string
+	reportBaseDir  string
 }
 
 func newDefaultReporterConfig() (config ReporterConfig) {
-	config = ReporterConfig{
+	return ReporterConfig{
 		reportFileName: "testreport.xml",
 		reporterType:   "junit",
+		reportBaseDir:  "",
 	}
-	return config
+}
+func newCustomReporterConfig(filename string, basedir string, reporterType string) (config ReporterConfig) {
+	return ReporterConfig{
+		reportFileName: filename,
+		reportBaseDir:  basedir,
+		reporterType:   reporterType,
+	}
 }
 
 type GlobalConfig struct {
 	AwsConfig      *aws.Config
 	ReporterConfig ReporterConfig
+}
+
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
 }
 
 var (
@@ -42,8 +56,26 @@ var (
 	containerTag   = kingpin.Flag("tag", "Container tag to fetch scan results for").Envar("ESA_ECR_CONTAINER_TAG").Default("2.14.12-02-30102019").String()
 	severityCutoff = kingpin.Flag("cutoff", "Severity to count as failures").Envar("ESA_SEVERITY_CUTOFF").Default("MEDIUM").String()
 	//containerHash =  kingpin.Flag("hash", "Container hash to fetch scan results for").Envar("ESA_ECR_CONTAINER_HASH").String()
+	reporterList = kingpin.Flag("reporter", "Reporter(s) to use").Envar("ESA_REPORTERS").Default("junit").String()
 	//reporterConfigFile = kingpin.Flag("reporter", "Configuration file for configuring reporters").Envar("ESA_REPORTER_CONFIG").Default("").String()
 )
+
+func fileWriter(config ReporterConfig, input []byte) (err error) {
+	var filepath = fmt.Sprintf("%s%s", config.reportBaseDir, config.reportFileName)
+
+	file, err := os.Create(filepath)
+	check(err)
+	writer := bufio.NewWriter(file)
+	ws, err := writer.WriteString(xml.Header)
+	check(err)
+	fmt.Printf("wrote header %d", ws)
+	wf, err := writer.Write(input)
+	check(err)
+	fmt.Printf("writing results %d", wf)
+	err = writer.Flush()
+	check(err)
+	return err
+}
 
 func main() {
 
@@ -51,6 +83,8 @@ func main() {
 
 	repositoryName := strings.Join([]string{*baseRepo, *containerName}, "/")
 	findings := map[string]ecr.ImageScanFindings{}
+	ReporterConfig := newDefaultReporterConfig()
+
 	if *composition != "" {
 		yamlFile, err := ioutil.ReadFile(*composition)
 
@@ -70,25 +104,16 @@ func main() {
 		}
 
 		for f := range findings {
-			fmt.Printf("DEBUG:: result for image %s: %v\n", f, findings[f].Findings)
-			//testSuite, err := reporters.NewTestSuite(f, findings[f])
-			//if err != nil {
-			//		panic(err)
-			//}
-			//fmt.Printf("blargh %v", testSuite)
+			newCustomReporterConfig("report.xml", fmt.Sprintf("%s/", f), *reporterList)
 
 		}
 
 	} else {
 		result, err := aggregator.EcrGetScanResultsByTag(repositoryName, *containerTag, *registryId)
-		if err != nil {
-			panic(err)
-		}
+		check(err)
 		findings[*containerName] = *result.ImageScanFindings
-
-		fmt.Printf("DEBUG:: result for image %v: %v\n", containerName, findings[*containerName].Findings)
-
 		testSuite, err := reporters.NewTestSuite(*containerName, *severityCutoff, findings[*containerName])
+
 		if err != nil {
 			fmt.Printf("KAPOTSTUK %e", err)
 		}
@@ -96,11 +121,8 @@ func main() {
 		if err != nil {
 			fmt.Printf("KAPOTSTUK %e", err)
 		}
-		writer := bufio.NewWriter(os.Stdout)
-		writer.WriteString(xml.Header)
-		writer.Write(bytes)
-		writer.WriteByte('\n')
-		writer.Flush()
+		ioerr := fileWriter(ReporterConfig, bytes)
+		check(ioerr)
 	}
 
 }
