@@ -2,35 +2,107 @@ package reporters
 
 import (
 	"encoding/xml"
+	"fmt"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/onsi/ginkgo/reporters"
 )
 
-func NewTestSuite(component string, findings ecr.ImageScanFindings) (testSuite reporters.JUnitTestSuite, err error) {
-	var failures int = int(*findings.FindingSeverityCounts["CRITICAL"])
+func NewTestSuite(container string, cutoff string, findings ecr.ImageScanFindings) (testSuite reporters.JUnitTestSuite, err error) {
+	failures, err := countFailures(cutoff, findings.FindingSeverityCounts)
+	if err != nil {
+		panic(err)
+	}
+
 	testSuite = reporters.JUnitTestSuite{
-		XMLName:   xml.Name{component, "bla"},
+		XMLName:   xml.Name{container, "bla"},
 		TestCases: nil,
-		Name:      component,
+		Name:      container,
 		Tests:     len(findings.Findings),
 		Failures:  failures,
 		Errors:    0,
 		Time:      0,
 	}
 	for f := range findings.Findings {
-		finding := findings.Findings[f]
+		testSuite.TestCases = append(testSuite.TestCases, createTestCase(container, cutoff, *findings.Findings[f]))
+	}
 
-		testCase := reporters.JUnitTestCase{
+	return testSuite, err
+}
+
+func countFailures(cutoff string, severityCounts map[string]*int64) (failures int, err error) {
+	var f int64 = 0
+	switch cutoff {
+	case "LOW":
+		f = getSeverityCount("LOW", severityCounts)
+		fallthrough
+	case "MEDIUM":
+		f = f + getSeverityCount("MEDIUM", severityCounts)
+		fallthrough
+	case "HIGH":
+		f = f + getSeverityCount("HIGH", severityCounts)
+		fallthrough
+	case "CRITICAL":
+		f = f + getSeverityCount("CRITICAL", severityCounts)
+	}
+	return int(f), err
+}
+func getSeverityCount(index string, severityCounts map[string]*int64) (count int64) {
+	value, present := severityCounts[index]
+	if present {
+		return *value
+	} else {
+		return 0
+	}
+}
+
+func hasPassedCutoff(cutoff string, severity string) (passed bool) {
+	severityMap := map[string]int{
+		"LOW":      0,
+		"MEDIUM":   1,
+		"HIGH":     2,
+		"CRITICAL": 3,
+	}
+	if severityMap[severity] >= severityMap[cutoff] {
+		return false
+	} else {
+		return true
+	}
+
+}
+
+func createTestCase(container string, cutoff string, finding ecr.ImageScanFinding) (testCase reporters.JUnitTestCase) {
+	passed := hasPassedCutoff(cutoff, *finding.Severity)
+	if passed {
+		return reporters.JUnitTestCase{
 			Name:           *finding.Name,
-			ClassName:      component,
-			PassedMessage:  nil,
+			ClassName:      container,
+			PassedMessage:  newPassedMessage(*finding.Name, cutoff),
 			FailureMessage: nil,
 			Skipped:        nil,
 			Time:           0,
 			SystemOut:      "",
 		}
-		testSuite.TestCases[f] = testCase
+	} else {
+		return reporters.JUnitTestCase{
+			Name:           *finding.Name,
+			ClassName:      container,
+			PassedMessage:  nil,
+			FailureMessage: newFailedMessage(*finding.Name, *finding.Severity, *finding.Description),
+			Skipped:        nil,
+			Time:           0,
+			SystemOut:      "",
+		}
 	}
+}
 
-	return testSuite, err
+func newPassedMessage(name string, cutoff string) *reporters.JUnitPassedMessage {
+	return &reporters.JUnitPassedMessage{
+		Message: fmt.Sprintf("Vulnerability %s below cutoff %s. Passed!", name, cutoff),
+	}
+}
+func newFailedMessage(name string, severity string, cutoff string) *reporters.JUnitFailureMessage {
+	return &reporters.JUnitFailureMessage{
+		Type:    severity,
+		Message: fmt.Sprintf("Vulnerability %s of severity %s above cutoff %s. FAILED!", name, severity, cutoff),
+	}
 }
