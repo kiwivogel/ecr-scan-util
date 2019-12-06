@@ -87,7 +87,7 @@ func createTestCase(container string, cutoff string, finding ecr.ImageScanFindin
 			Name:           *finding.Name,
 			ClassName:      container,
 			PassedMessage:  nil,
-			FailureMessage: newFailedMessage(*finding.Name, *finding.Severity, *finding.Description),
+			FailureMessage: newFailedMessage(*finding.Name, *finding.Severity, cutoff, *finding.Description),
 			Skipped:        nil,
 			Time:           0,
 			SystemOut:      "",
@@ -100,9 +100,9 @@ func newPassedMessage(name string, cutoff string) *reporters.JUnitPassedMessage 
 		Message: fmt.Sprintf("Vulnerability %s below cutoff %s. Passed!", name, cutoff),
 	}
 }
-func newFailedMessage(name string, severity string, cutoff string) *reporters.JUnitFailureMessage {
+func newFailedMessage(name string, severity string, cutoff string, description string) *reporters.JUnitFailureMessage {
 	return &reporters.JUnitFailureMessage{
 		Type:    severity,
-		Message: fmt.Sprintf("Vulnerability %s of severity %s above cutoff %s. FAILED!", name, severity, cutoff),
+		Message: fmt.Sprintf("Vulnerability %s of severity %s above cutoff %s. FAILED! Description: %s", name, severity, cutoff, description),
 	}
 }
