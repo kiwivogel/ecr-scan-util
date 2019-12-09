@@ -11,10 +11,12 @@ import (
 
 var region = "eu-west-1"
 
-func BatchGetScanResultsByTag(repositories map[string]string, registryId string) (result map[string]*ecr.DescribeImageScanFindingsOutput, err error) {
+func BatchGetScanResultsByTag(repositories map[string]string, registryId string, prefix string) (map[string]*ecr.DescribeImageScanFindingsOutput, error) {
+	result := make(map[string]*ecr.DescribeImageScanFindingsOutput)
+	var err error
 	for c, v := range repositories {
 
-		result[c], err = EcrGetScanResultsByTag(strings.Join([]string{"zorgdomein/", strings.Replace(strings.Replace(c, "_version", "", 1), "_", "-", -1)}, ""), v, registryId)
+		result[c], err = EcrGetScanResultsByTag(strings.Join([]string{prefix, c}, "/"), v, registryId)
 		if err != nil {
 			return nil, err
 		}
