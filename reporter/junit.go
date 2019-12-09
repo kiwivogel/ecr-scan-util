@@ -4,16 +4,48 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/onsi/ginkgo/reporters"
 )
 
-func NewTestSuite(container string, cutoff string, findings ecr.ImageScanFindings) (testSuite reporters.JUnitTestSuite, err error) {
+type JUnitTestSuite struct {
+	XMLName   xml.Name        `xml:"testsuite"`
+	TestCases []JUnitTestCase `xml:"testcase"`
+	Name      string          `xml:"name,attr"`
+	Tests     int             `xml:"tests,attr"`
+	Failures  int             `xml:"failures,attr"`
+	Errors    int             `xml:"errors,attr"`
+	Time      float64         `xml:"time,attr"`
+}
+
+type JUnitTestCase struct {
+	Name           string               `xml:"name,attr"`
+	ClassName      string               `xml:"classname,attr"`
+	PassedMessage  *JUnitPassedMessage  `xml:"passed,omitempty"`
+	FailureMessage *JUnitFailureMessage `xml:"failure,omitempty"`
+	Skipped        *JUnitSkipped        `xml:"skipped,omitempty"`
+	Time           float64              `xml:"time,attr"`
+	SystemOut      string               `xml:"system-out,omitempty"`
+}
+
+type JUnitPassedMessage struct {
+	Message string `xml:",chardata"`
+}
+
+type JUnitFailureMessage struct {
+	Type    string `xml:"type,attr"`
+	Message string `xml:",chardata"`
+}
+
+type JUnitSkipped struct {
+	XMLName xml.Name `xml:"skipped"`
+}
+
+func NewTestSuite(container string, cutoff string, findings ecr.ImageScanFindings) (testSuite JUnitTestSuite, err error) {
 	failures, err := countFailures(cutoff, findings.FindingSeverityCounts)
 	if err != nil {
 		panic(err)
 	}
 
-	testSuite = reporters.JUnitTestSuite{
+	testSuite = JUnitTestSuite{
 		XMLName:   xml.Name{container, "bla"},
 		TestCases: nil,
 		Name:      container,
@@ -70,7 +102,7 @@ func hasPassedCutoff(cutoff string, severity string) (passed bool) {
 
 }
 
-func createTestCase(cutoff string, finding ecr.ImageScanFinding) (testCase reporters.JUnitTestCase) {
+func createTestCase(cutoff string, finding ecr.ImageScanFinding) (testCase JUnitTestCase) {
 	passed := hasPassedCutoff(cutoff, *finding.Severity)
 	packageName, err := ExtractPackageAttributes("package_name", &finding)
 	packageVersion, err := ExtractPackageAttributes("package_version", &finding)
@@ -79,7 +111,7 @@ func createTestCase(cutoff string, finding ecr.ImageScanFinding) (testCase repor
 		panic(err)
 	}
 	if passed {
-		return reporters.JUnitTestCase{
+		return JUnitTestCase{
 			Name:           *finding.Name,
 			ClassName:      packageString,
 			PassedMessage:  newPassedMessage(*finding.Name, *finding.Severity, cutoff),
@@ -89,7 +121,7 @@ func createTestCase(cutoff string, finding ecr.ImageScanFinding) (testCase repor
 			SystemOut:      "",
 		}
 	} else {
-		return reporters.JUnitTestCase{
+		return JUnitTestCase{
 			Name:           *finding.Name,
 			ClassName:      packageString,
 			PassedMessage:  nil,
@@ -101,13 +133,13 @@ func createTestCase(cutoff string, finding ecr.ImageScanFinding) (testCase repor
 	}
 }
 
-func newPassedMessage(name string, severity string, cutoff string) *reporters.JUnitPassedMessage {
-	return &reporters.JUnitPassedMessage{
+func newPassedMessage(name string, severity string, cutoff string) *JUnitPassedMessage {
+	return &JUnitPassedMessage{
 		Message: fmt.Sprintf("Vulnerability %s with severity %s below cutoff %s. PASSED!", name, severity, cutoff),
 	}
 }
-func newFailedMessage(name string, severity string, cutoff string, description string) *reporters.JUnitFailureMessage {
-	return &reporters.JUnitFailureMessage{
+func newFailedMessage(name string, severity string, cutoff string, description string) *JUnitFailureMessage {
+	return &JUnitFailureMessage{
 		Type:    severity,
 		Message: fmt.Sprintf("Vulnerability %s of severity %s above cutoff %s. FAILED! Description: %s", name, severity, cutoff, description),
 	}
