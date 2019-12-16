@@ -23,6 +23,7 @@ func NewDefaultReporterConfig() (config ReporterConfig) {
 		ReportBaseDir:  "",
 	}
 }
+
 func NewCustomReporterConfig(filename string, basedir string, reporterType string) (config ReporterConfig) {
 	return ReporterConfig{
 		ReportFileName: filename,
@@ -42,6 +43,7 @@ func Check(e error, message string) {
 		panic(e)
 	}
 }
+
 func CompositionParser(compositionFile string) (map[string]string, error) {
 	zdComposition := make(map[string]string)
 	containerList := make(map[string]string)

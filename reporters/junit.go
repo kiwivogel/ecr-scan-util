@@ -90,6 +90,7 @@ func countFailures(cutoff string, severityCounts map[string]*int64) (failures in
 	}
 	return int(f), err
 }
+
 func getSeverityCount(index string, severityCounts map[string]*int64) (count int64) {
 	value, present := severityCounts[index]
 	if present {
