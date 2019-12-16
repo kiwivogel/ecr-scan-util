@@ -1,9 +1,12 @@
 package reporters
 
 import (
+	"bufio"
 	"encoding/xml"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/kiwivogel/ecr-scan-util/helpers"
+	"os"
 )
 
 type JUnitTestSuite struct {
@@ -39,7 +42,16 @@ type JUnitSkipped struct {
 	XMLName xml.Name `xml:"skipped"`
 }
 
-func NewTestSuite(container string, cutoff string, findings ecr.ImageScanFindings) (testSuite JUnitTestSuite, err error) {
+func CreateXmlReport(container string, cutoff string, findings ecr.ImageScanFindings, config helpers.ReporterConfig) (err error) {
+	s, e := newTestSuite(container, cutoff, findings)
+	helpers.Check(e, fmt.Sprintf("Failed to create testsuite, %e", err))
+
+	we := xmlReportWriter(config, s)
+	helpers.Check(we, "Failed to write file.")
+	return err
+}
+
+func newTestSuite(container string, cutoff string, findings ecr.ImageScanFindings) (testSuite JUnitTestSuite, err error) {
 	failures, err := countFailures(cutoff, findings.FindingSeverityCounts)
 	if err != nil {
 		panic(err)
@@ -104,8 +116,8 @@ func hasPassedCutoff(cutoff string, severity string) (passed bool) {
 
 func createTestCase(cutoff string, finding ecr.ImageScanFinding) (testCase JUnitTestCase) {
 	passed := hasPassedCutoff(cutoff, *finding.Severity)
-	packageName, err := ExtractPackageAttributes("package_name", &finding)
-	packageVersion, err := ExtractPackageAttributes("package_version", &finding)
+	packageName, err := helpers.ExtractPackageAttributes("package_name", &finding)
+	packageVersion, err := helpers.ExtractPackageAttributes("package_version", &finding)
 	packageString := fmt.Sprintf("%s@%s", packageName, packageVersion)
 	if err != nil {
 		panic(err)
@@ -143,4 +155,33 @@ func newFailedMessage(name string, severity string, cutoff string, description s
 		Type:    severity,
 		Message: fmt.Sprintf("Vulnerability %s of severity %s above cutoff %s. FAILED! Description: %s", name, severity, cutoff, description),
 	}
+}
+
+func xmlReportWriter(config helpers.ReporterConfig, suite JUnitTestSuite) (err error) {
+
+	var filepath = fmt.Sprintf("%s%s", config.ReportBaseDir, config.ReportFileName)
+
+	if config.ReportBaseDir != "" {
+		if _, err := os.Stat(config.ReportBaseDir); os.IsNotExist(err) {
+			err := os.Mkdir(config.ReportBaseDir, 0744)
+			helpers.Check(err, fmt.Sprintf("Failed to create directory %s", config.ReportBaseDir))
+		}
+		helpers.Check(err, "")
+	}
+
+	formattedSuite, e := xml.MarshalIndent(suite, "", "\t")
+	helpers.Check(e, fmt.Sprintf("Failed to marshall and indent xml, %e", err))
+
+	file, err := os.Create(filepath)
+	helpers.Check(err, "")
+	writer := bufio.NewWriter(file)
+	ws, err := writer.WriteString(xml.Header)
+	helpers.Check(err, "")
+	fmt.Printf("wrote header %d \n", ws)
+	wf, err := writer.Write(formattedSuite)
+	helpers.Check(err, "")
+	fmt.Printf("writing results %d \n", wf)
+	err = writer.Flush()
+	helpers.Check(err, "")
+	return err
 }
