@@ -1,11 +1,11 @@
 package main
 
 import (
+	"./aggregator"
+	"./helpers"
+	"./reporters"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/kiwivogel/ecr-scan-util/aggregator"
-	"github.com/kiwivogel/ecr-scan-util/helpers"
-	"github.com/kiwivogel/ecr-scan-util/reporters"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"strings"
 	"time"
