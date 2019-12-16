@@ -10,6 +10,27 @@ import (
 	"strings"
 )
 
+type ReporterConfig struct {
+	ReportFileName string
+	ReporterType   string
+	ReportBaseDir  string
+}
+
+func NewDefaultReporterConfig() (config ReporterConfig) {
+	return ReporterConfig{
+		ReportFileName: "testreport.xml",
+		ReporterType:   "junit",
+		ReportBaseDir:  "",
+	}
+}
+func NewCustomReporterConfig(filename string, basedir string, reporterType string) (config ReporterConfig) {
+	return ReporterConfig{
+		ReportFileName: filename,
+		ReportBaseDir:  basedir,
+		ReporterType:   reporterType,
+	}
+}
+
 type GlobalConfig struct {
 	AwsConfig      *aws.Config
 	ReporterConfig ReporterConfig
@@ -38,14 +59,6 @@ func CompositionParser(compositionFile string) (map[string]string, error) {
 	return containerList, err
 }
 
-func versionStripper(input string) (output string) {
-	return strings.Replace(input, "_version", "", 1)
-}
-
-func underscoreHyphenator(input string) (output string) {
-	return strings.Replace(input, "_", "-", -1)
-}
-
 func ExtractPackageAttributes(query string, finding *ecr.ImageScanFinding) (attribute string, err error) {
 	for a := range finding.Attributes {
 		if *finding.Attributes[a].Key == query {
@@ -60,23 +73,10 @@ func ExtractPackageAttributes(query string, finding *ecr.ImageScanFinding) (attr
 	}
 }
 
-type ReporterConfig struct {
-	ReportFileName string
-	ReporterType   string
-	ReportBaseDir  string
+func versionStripper(input string) (output string) {
+	return strings.Replace(input, "_version", "", 1)
 }
 
-func NewDefaultReporterConfig() (config ReporterConfig) {
-	return ReporterConfig{
-		ReportFileName: "testreport.xml",
-		ReporterType:   "junit",
-		ReportBaseDir:  "",
-	}
-}
-func NewCustomReporterConfig(filename string, basedir string, reporterType string) (config ReporterConfig) {
-	return ReporterConfig{
-		ReportFileName: filename,
-		ReportBaseDir:  basedir,
-		ReporterType:   reporterType,
-	}
+func underscoreHyphenator(input string) (output string) {
+	return strings.Replace(input, "_", "-", -1)
 }

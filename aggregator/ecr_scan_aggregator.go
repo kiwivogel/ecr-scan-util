@@ -24,28 +24,6 @@ func BatchGetScanResultsByTag(repositories map[string]string, registryId string,
 	return result, err
 }
 
-func createImageScanFindingsInput(repositoryName string, imageTag string, registryId string) (input *ecr.DescribeImageScanFindingsInput, err error) {
-	if registryId == "" {
-		input = &ecr.DescribeImageScanFindingsInput{
-			RepositoryName: aws.String(repositoryName),
-			ImageId: &ecr.ImageIdentifier{
-				ImageTag: aws.String(imageTag),
-			},
-			MaxResults: aws.Int64(1000), //to avoid paginated results with more than 100 but less than 1000 results.
-		}
-	} else {
-		input = &ecr.DescribeImageScanFindingsInput{
-			RepositoryName: aws.String(repositoryName),
-			RegistryId:     aws.String(registryId),
-			ImageId: &ecr.ImageIdentifier{
-				ImageTag: aws.String(imageTag),
-			},
-			MaxResults: aws.Int64(1000), //to avoid paginated results with more than 100 but less than 1000 results.
-		}
-	}
-	return input, err
-}
-
 func EcrGetScanResultsByTag(repositoryName string, imageTag string, registryId string) (findings *ecr.DescribeImageScanFindingsOutput, err error) {
 	s := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(region),
@@ -76,4 +54,26 @@ func EcrGetScanResultsByTag(repositoryName string, imageTag string, registryId s
 		return
 	}
 	return result, nil
+}
+
+func createImageScanFindingsInput(repositoryName string, imageTag string, registryId string) (input *ecr.DescribeImageScanFindingsInput, err error) {
+	if registryId == "" {
+		input = &ecr.DescribeImageScanFindingsInput{
+			RepositoryName: aws.String(repositoryName),
+			ImageId: &ecr.ImageIdentifier{
+				ImageTag: aws.String(imageTag),
+			},
+			MaxResults: aws.Int64(1000), //to avoid paginated results with more than 100 but less than 1000 results.
+		}
+	} else {
+		input = &ecr.DescribeImageScanFindingsInput{
+			RepositoryName: aws.String(repositoryName),
+			RegistryId:     aws.String(registryId),
+			ImageId: &ecr.ImageIdentifier{
+				ImageTag: aws.String(imageTag),
+			},
+			MaxResults: aws.Int64(1000), //to avoid paginated results with more than 100 but less than 1000 results.
+		}
+	}
+	return input, err
 }
