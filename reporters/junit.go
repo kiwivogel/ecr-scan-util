@@ -1,11 +1,11 @@
 package reporters
 
 import (
-	"../helpers"
 	"bufio"
 	"encoding/xml"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/kiwivogel/ecr-scan-util/helpers"
 	"os"
 )
 

@@ -1,9 +1,9 @@
 package reporters
 
 import (
-	"../helpers"
 	"github.com/aws/aws-sdk-go/service/ecr"
-	)
+	"github.com/kiwivogel/ecr-scan-util/helpers"
+)
 
 type VulnerabilityReport struct {
 	Image          string
