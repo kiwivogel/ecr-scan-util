@@ -16,6 +16,8 @@ type VulnerabilityReport struct {
 }
 
 func CreateNewVulnerabilityReport(imageName string, imageTag string, finding *ecr.ImageScanFinding) (findingReport VulnerabilityReport, err error) {
+	// if errors this is caused by an unexpected lack of package_name or package_version in a finding, this could technically
+	// happen if something is wrong on AWS's side.
 	packageName, err := helpers.ExtractPackageAttributes("package_name", finding)
 	packageVersion, err := helpers.ExtractPackageAttributes("package_version", finding)
 	if err != nil {
