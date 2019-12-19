@@ -5,8 +5,10 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/google/logger"
 	"github.com/kiwivogel/ecr-scan-util/helpers"
 	"os"
+	"path"
 )
 
 type JUnitTestSuite struct {
@@ -42,38 +44,30 @@ type JUnitSkipped struct {
 	XMLName xml.Name `xml:"skipped"`
 }
 
-func CreateXmlReport(container string, cutoff string, findings ecr.ImageScanFindings, config helpers.ReporterConfig) (err error) {
-	s, e := newTestSuite(container, cutoff, findings)
-	helpers.Check(e, fmt.Sprintf("Failed to create testsuite, %e", err))
-
-	we := xmlReportWriter(config, s)
-	helpers.Check(we, "Failed to write file.")
+func CreateXmlReport(container string, cutoff string, findings ecr.ImageScanFindings, config helpers.ReporterConfig, l logger.Logger) (err error) {
+	s := newTestSuite(container, cutoff, findings)
+	we := xmlReportWriter(config, s, l)
+	helpers.Check(we, l, "Failed to write file.\n")
 	return err
 }
 
-func newTestSuite(container string, cutoff string, findings ecr.ImageScanFindings) (testSuite JUnitTestSuite, err error) {
-	failures, err := countFailures(cutoff, findings.FindingSeverityCounts)
-	if err != nil {
-		panic(err)
-	}
-
+func newTestSuite(container string, cutoff string, findings ecr.ImageScanFindings) (testSuite JUnitTestSuite) {
 	testSuite = JUnitTestSuite{
 		XMLName:   xml.Name{container, "bla"},
 		TestCases: nil,
 		Name:      container,
 		Tests:     len(findings.Findings),
-		Failures:  failures,
+		Failures:  countFailures(cutoff, findings.FindingSeverityCounts),
 		Errors:    int(getSeverityCount("UNDEFINED", findings.FindingSeverityCounts)),
 		Time:      0,
 	}
 	for f := range findings.Findings {
 		testSuite.TestCases = append(testSuite.TestCases, createTestCase(cutoff, *findings.Findings[f]))
 	}
-
-	return testSuite, err
+	return testSuite
 }
 
-func countFailures(cutoff string, severityCounts map[string]*int64) (failures int, err error) {
+func countFailures(cutoff string, severityCounts map[string]*int64) (failures int) {
 	var f int64 = 0
 	switch cutoff {
 	case "LOW":
@@ -88,7 +82,7 @@ func countFailures(cutoff string, severityCounts map[string]*int64) (failures in
 	case "CRITICAL":
 		f = f + getSeverityCount("CRITICAL", severityCounts)
 	}
-	return int(f), err
+	return int(f)
 }
 
 func getSeverityCount(index string, severityCounts map[string]*int64) (count int64) {
@@ -100,18 +94,14 @@ func getSeverityCount(index string, severityCounts map[string]*int64) (count int
 	}
 }
 
-func hasPassedCutoff(cutoff string, severity string) (passed bool) {
+func hasPassedCutoff(cutoff string, severity string) bool {
 	severityMap := map[string]int{
 		"LOW":      0,
 		"MEDIUM":   1,
 		"HIGH":     2,
 		"CRITICAL": 3,
 	}
-	if severityMap[severity] >= severityMap[cutoff] {
-		return false
-	} else {
-		return true
-	}
+	return severityMap[severity] >= severityMap[cutoff]
 
 }
 
@@ -158,31 +148,39 @@ func newFailedMessage(name string, severity string, cutoff string, description s
 	}
 }
 
-func xmlReportWriter(config helpers.ReporterConfig, suite JUnitTestSuite) (err error) {
+func xmlReportWriter(config helpers.ReporterConfig, suite JUnitTestSuite, l logger.Logger) (err error) {
 
-	var filepath = fmt.Sprintf("%s%s", config.ReportBaseDir, config.ReportFileName)
+	var filepath = path.Join(config.ReportBaseDir, config.ReportFileName)
 
 	if config.ReportBaseDir != "" {
 		if _, err := os.Stat(config.ReportBaseDir); os.IsNotExist(err) {
 			err := os.Mkdir(config.ReportBaseDir, 0744)
-			helpers.Check(err, fmt.Sprintf("Failed to create directory %s", config.ReportBaseDir))
+			helpers.Check(err, l, "Failed to create directory %s\n", config.ReportBaseDir)
 		}
-		helpers.Check(err, "")
+		helpers.Check(err, l, "")
 	}
 
 	formattedSuite, e := xml.MarshalIndent(suite, "", "\t")
-	helpers.Check(e, fmt.Sprintf("Failed to marshall and indent xml, %e", err))
+	helpers.Check(e, l, "Failed to marshall and indent xml, %v\n", err)
 
 	file, err := os.Create(filepath)
-	helpers.Check(err, "")
+	defer closeFile(file, l)
+	helpers.Check(err, l, "")
 	writer := bufio.NewWriter(file)
-	ws, err := writer.WriteString(xml.Header)
-	helpers.Check(err, "")
-	fmt.Printf("wrote header %d \n", ws)
-	wf, err := writer.Write(formattedSuite)
-	helpers.Check(err, "")
-	fmt.Printf("writing results %d \n", wf)
+
+	fmt.Printf("writing header to %s \n", filepath)
+	_, err = writer.WriteString(xml.Header)
+	helpers.Check(err, l, "Failed to write header to %s: %v", filepath, err)
+
+	fmt.Printf("writing results %s \n", filepath)
+	_, err = writer.Write(formattedSuite)
+	helpers.Check(err, l, "Failed to write results to %s: %v", filepath, err)
+
 	err = writer.Flush()
-	helpers.Check(err, "")
 	return err
+}
+
+func closeFile(file *os.File, l logger.Logger) {
+	err := file.Close()
+	helpers.CheckAndExit(err, l, "Failed to close file : %v", file, err)
 }

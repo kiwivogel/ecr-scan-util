@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/google/logger"
 	"github.com/kiwivogel/ecr-scan-util/aggregator"
 	"github.com/kiwivogel/ecr-scan-util/helpers"
 	"github.com/kiwivogel/ecr-scan-util/reporters"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"strings"
-	"time"
 )
 
 var (
@@ -19,6 +19,7 @@ var (
 	containerTag   = kingpin.Flag("tag", "Container tag or hash to fetch scan results for").Envar("ESA_ECR_CONTAINER_IDENTIFIER").Default("2.14.12-02-30102019").String()
 	reportDir      = kingpin.Flag("directory", "Directory to write reports to").Envar("ESA_REPORT_DIR").Default("reports").String()
 	severityCutoff = kingpin.Flag("cutoff", "Severity to count as failures").Envar("ESA_SEVERITY_CUTOFF").Default("MEDIUM").String()
+	verbose        = kingpin.Flag("verbose", "log actions to stdout").Envar("ESA_VERBOSE_BOOL").Default("true").Bool()
 	//TODO: Implement hash based findings, Probably requires further abstraction of *ecrDescribeImageScanFindingsInput
 	//containerHash =  kingpin.Flag("hash", "Container hash to fetch scan results for").Envar("ESA_ECR_CONTAINER_HASH").String()
 	reporterList = kingpin.Flag("reporter", "Reporter(s) to use").Envar("ESA_REPORTERS").Default("junit").String()
@@ -30,24 +31,30 @@ func main() {
 
 	kingpin.Parse()
 
+	//Do not log to file for now.
+	L := logger.Init("ESA Logger", *verbose, true, nil)
+
 	findings := map[string]ecr.ImageScanFindings{}
 
 	if *composition != "" {
 
-		cl, err := helpers.CompositionParser(*composition)
-		helpers.Check(err, "failed to create containerlist")
+		L.Info("Reading Composition...")
+		cl, err := helpers.CompositionParser(*composition, *L)
+		helpers.Check(err, *L, "Failed to generate container list")
+
+		L.Info("")
 		resultsArray, err := aggregator.BatchGetScanResultsByTag(cl, *registryId, *baseRepo)
-		helpers.Check(err, "Failed to get results")
+		helpers.Check(err, *L, "Failed to get results")
 		for r := range resultsArray {
 			findings[r] = *resultsArray[r].ImageScanFindings
 		}
 
 		for f := range findings {
 
-			singleReporterConfig := helpers.NewCustomReporterConfig(fmt.Sprintf("%s-%s.xml", f, time.Now().Format(time.RFC850)), fmt.Sprintf("%s/", *reportDir), *reporterList)
+			singleReporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(f), fmt.Sprintf("%s/", *reportDir), *reporterList)
 			if singleReporterConfig.ReporterType == "junit" {
-				se := reporters.CreateXmlReport(f, *severityCutoff, findings[f], singleReporterConfig)
-				helpers.Check(se, fmt.Sprintf("Failed to write report for %s", f))
+				se := reporters.CreateXmlReport(f, *severityCutoff, findings[f], singleReporterConfig, *L)
+				helpers.Check(se, *L, "Failed to write report for %s", f)
 			}
 
 		}
@@ -55,13 +62,13 @@ func main() {
 	} else {
 
 		repositoryName := strings.Join([]string{*baseRepo, *containerName}, "/")
-		ReporterConfig := helpers.NewCustomReporterConfig(fmt.Sprintf("%s-%s.xml", *containerName, time.Now().Format(time.RFC850)), fmt.Sprintf("%s/", *reportDir), *reporterList)
+		ReporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(*containerName), fmt.Sprintf("%s/", *reportDir), *reporterList)
 
 		result, err := aggregator.EcrGetScanResultsByTag(repositoryName, *containerTag, *registryId)
-		helpers.Check(err, fmt.Sprintf("Failed to write report for %s:%s", *containerName, *containerTag))
+		helpers.Check(err, *L, "Failed to write report for %s:%s", *containerName, *containerTag)
 		findings[*containerName] = *result.ImageScanFindings
-		re := reporters.CreateXmlReport(repositoryName, *severityCutoff, findings[*containerName], ReporterConfig)
-		helpers.Check(re, fmt.Sprintf("Failed to write report for %s", *containerName))
+		re := reporters.CreateXmlReport(repositoryName, *severityCutoff, findings[*containerName], ReporterConfig, *L)
+		helpers.Check(re, *L, "Failed to write report for %s", *containerName)
 	}
 
 }
