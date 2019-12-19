@@ -101,8 +101,7 @@ func hasPassedCutoff(cutoff string, severity string) bool {
 		"HIGH":     2,
 		"CRITICAL": 3,
 	}
-	return severityMap[severity] >= severityMap[cutoff]
-
+	return !(severityMap[severity] >= severityMap[cutoff])
 }
 
 func createTestCase(cutoff string, finding ecr.ImageScanFinding) (testCase JUnitTestCase) {
