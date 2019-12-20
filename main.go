@@ -8,6 +8,8 @@ import (
 	"github.com/kiwivogel/ecr-scan-util/helpers"
 	"github.com/kiwivogel/ecr-scan-util/reporters"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"io/ioutil"
+	"log"
 	"strings"
 )
 
@@ -31,9 +33,8 @@ func main() {
 
 	kingpin.Parse()
 
-	//Do not log to file for now.
-	L := logger.Init("ESA Logger", *verbose, true, nil)
-
+	L := logger.Init("ESA Logger", *verbose, true, ioutil.Discard)
+	logger.SetFlags(log.LUTC)
 	findings := map[string]ecr.ImageScanFindings{}
 
 	if *composition != "" {
@@ -42,19 +43,17 @@ func main() {
 		cl, err := helpers.CompositionParser(*composition, *L)
 		helpers.Check(err, *L, "Failed to generate container list")
 
-		L.Info("")
+		L.Info("Getting Results for composition...")
 		resultsArray, err := aggregator.BatchGetScanResultsByTag(cl, *registryId, *baseRepo)
 		helpers.Check(err, *L, "Failed to get results")
+
 		for r := range resultsArray {
-			findings[r] = *resultsArray[r].ImageScanFindings
-		}
+			results := *resultsArray[r].ImageScanFindings
 
-		for f := range findings {
-
-			singleReporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(f), fmt.Sprintf("%s/", *reportDir), *reporterList)
+			singleReporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(r), fmt.Sprintf("%s/", *reportDir), *reporterList)
 			if singleReporterConfig.ReporterType == "junit" {
-				se := reporters.CreateXmlReport(f, *severityCutoff, findings[f], singleReporterConfig, *L)
-				helpers.Check(se, *L, "Failed to write report for %s", f)
+				se := reporters.CreateXmlReport(r, *severityCutoff, results, singleReporterConfig, *L)
+				helpers.Check(se, *L, "Failed to write report for %s", r)
 			}
 
 		}

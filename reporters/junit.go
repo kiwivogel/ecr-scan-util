@@ -112,27 +112,21 @@ func createTestCase(cutoff string, finding ecr.ImageScanFinding) (testCase JUnit
 	if err != nil {
 		panic(err)
 	}
-	if passed {
-		return JUnitTestCase{
-			Name:           *finding.Name,
-			ClassName:      packageString,
-			PassedMessage:  newPassedMessage(*finding.Name, *finding.Severity, cutoff),
-			FailureMessage: nil,
-			Skipped:        nil,
-			Time:           0,
-			SystemOut:      "",
-		}
-	} else {
-		return JUnitTestCase{
-			Name:           *finding.Name,
-			ClassName:      packageString,
-			PassedMessage:  nil,
-			FailureMessage: newFailedMessage(*finding.Name, *finding.Severity, cutoff, *finding.Description),
-			Skipped:        nil,
-			Time:           0,
-			SystemOut:      "",
-		}
+	testCase = JUnitTestCase{
+		Name:      *finding.Name,
+		ClassName: packageString,
+		Skipped:   nil,
+		Time:      0,
+		SystemOut: "",
 	}
+	if passed {
+		testCase.PassedMessage = newPassedMessage(*finding.Name, *finding.Severity, cutoff)
+		testCase.FailureMessage = nil
+	} else {
+		testCase.FailureMessage = newFailedMessage(*finding.Name, *finding.Severity, cutoff, *finding.Description)
+		testCase.PassedMessage = nil
+	}
+	return testCase
 }
 
 func newPassedMessage(name string, severity string, cutoff string) *JUnitPassedMessage {
@@ -167,11 +161,11 @@ func xmlReportWriter(config helpers.ReporterConfig, suite JUnitTestSuite, l logg
 	helpers.Check(err, l, "")
 	writer := bufio.NewWriter(file)
 
-	fmt.Printf("writing header to %s \n", filepath)
+	l.Infof("writing header tp %s", filepath)
 	_, err = writer.WriteString(xml.Header)
 	helpers.Check(err, l, "Failed to write header to %s: %v", filepath, err)
 
-	fmt.Printf("writing results %s \n", filepath)
+	l.Infof("writing results to %s", filepath)
 	_, err = writer.Write(formattedSuite)
 	helpers.Check(err, l, "Failed to write results to %s: %v", filepath, err)
 

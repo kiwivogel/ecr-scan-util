@@ -57,23 +57,15 @@ func EcrGetScanResultsByTag(repositoryName string, imageTag string, registryId s
 }
 
 func createImageScanFindingsInput(repositoryName string, imageTag string, registryId string) (input *ecr.DescribeImageScanFindingsInput, err error) {
-	if registryId == "" {
-		input = &ecr.DescribeImageScanFindingsInput{
-			RepositoryName: aws.String(repositoryName),
-			ImageId: &ecr.ImageIdentifier{
-				ImageTag: aws.String(imageTag),
-			},
-			MaxResults: aws.Int64(1000), //to avoid paginated results with more than 100 but less than 1000 results.
-		}
-	} else {
-		input = &ecr.DescribeImageScanFindingsInput{
-			RepositoryName: aws.String(repositoryName),
-			RegistryId:     aws.String(registryId),
-			ImageId: &ecr.ImageIdentifier{
-				ImageTag: aws.String(imageTag),
-			},
-			MaxResults: aws.Int64(1000), //to avoid paginated results with more than 100 but less than 1000 results.
-		}
+	input = &ecr.DescribeImageScanFindingsInput{
+		RepositoryName: aws.String(repositoryName),
+		ImageId: &ecr.ImageIdentifier{
+			ImageTag: aws.String(imageTag),
+		},
+		MaxResults: aws.Int64(1000), //to avoid paginated results with more than 100 but less than 1000 results.
+	}
+	if registryId != "" {
+		input.RegistryId = aws.String(registryId)
 	}
 	return input, err
 }

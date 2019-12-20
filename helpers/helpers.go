@@ -57,13 +57,13 @@ func CompositionParser(compositionFile string, l logger.Logger) (map[string]stri
 	zdComposition := make(map[string]string)
 	containerList := make(map[string]string)
 
-	l.Info("trying to read container names and identifiers from %s", compositionFile)
+	l.Infof("trying to read container names and identifiers from %s", compositionFile)
 	yamlFile, err := ioutil.ReadFile(compositionFile)
-	Check(err, l, "Failed to read file %v: %v", compositionFile, err)
+	Check(err, l, "Failed to read file %s: %s", compositionFile, err)
 
-	l.Info("unmarshalling contents of %s", compositionFile)
+	l.Infof("unmarshalling contents of %s", compositionFile)
 	err = yaml.Unmarshal(yamlFile, zdComposition)
-	Check(err, l, "Failed to unmarshal %v, %v", yamlFile, err)
+	Check(err, l, "Failed to unmarshal %s, %v", yamlFile, err)
 
 	for c, v := range zdComposition {
 		c = underscoreHyphenator(versionStripper(c))
