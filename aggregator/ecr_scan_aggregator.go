@@ -41,8 +41,11 @@ func EcrGetScanResultsByTag(repositoryName string, imageTag string, registryId s
 				fmt.Println(ecr.ErrCodeServerException, aerr.Error())
 			case ecr.ErrCodeInvalidParameterException:
 				fmt.Println(ecr.ErrCodeInvalidParameterException, aerr.Error())
+			//TODO: handle missing repository or test result more gracefully (warn and skip if in batchmode)
 			case ecr.ErrCodeRepositoryNotFoundException:
 				fmt.Println(ecr.ErrCodeRepositoryNotFoundException, aerr.Error())
+			case ecr.ErrCodeScanNotFoundException:
+				fmt.Println(ecr.ErrCodeScanNotFoundException, aerr.Error())
 			default:
 				fmt.Println(aerr.Error())
 			}
