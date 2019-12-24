@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/google/logger"
 	"github.com/kiwivogel/ecr-scan-util/aggregator"
 	"github.com/kiwivogel/ecr-scan-util/helpers"
@@ -35,39 +34,53 @@ func main() {
 
 	L := logger.Init("ESA Logger", *verbose, true, ioutil.Discard)
 	logger.SetFlags(log.LUTC)
-	findings := map[string]ecr.ImageScanFindings{}
 
 	if *composition != "" {
 
-		L.Info("Reading Composition...")
-		cl, err := helpers.CompositionParser(*composition, *L)
-		helpers.Check(err, *L, "Failed to generate container list")
-
-		L.Info("Getting Results for composition...")
-		resultsArray, err := aggregator.BatchGetScanResultsByTag(cl, *registryId, *baseRepo)
-		helpers.Check(err, *L, "Failed to get results")
-
-		for r := range resultsArray {
-			results := *resultsArray[r].ImageScanFindings
-
-			singleReporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(r), fmt.Sprintf("%s/", *reportDir), *reporterList)
-			if singleReporterConfig.ReporterType == "junit" {
-				se := reporters.CreateXmlReport(r, *severityCutoff, results, singleReporterConfig, *L)
-				helpers.Check(se, *L, "Failed to write report for %s", r)
-			}
-
-		}
+		doCompositionBasedReports(*composition, *L)
 
 	} else {
 
-		repositoryName := strings.Join([]string{*baseRepo, *containerName}, "/")
-		ReporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(*containerName), fmt.Sprintf("%s/", *reportDir), *reporterList)
+		doSingleReport(*L)
 
-		result, err := aggregator.EcrGetScanResultsByTag(repositoryName, *containerTag, *registryId)
-		helpers.Check(err, *L, "Failed to write report for %s:%s", *containerName, *containerTag)
-		findings[*containerName] = *result.ImageScanFindings
-		re := reporters.CreateXmlReport(repositoryName, *severityCutoff, findings[*containerName], ReporterConfig, *L)
-		helpers.Check(re, *L, "Failed to write report for %s", *containerName)
 	}
 
+}
+
+func doCompositionBasedReports(composition string, l logger.Logger) {
+	l.Info("Reading Composition...")
+	cl, err := helpers.CompositionParser(composition, l)
+	helpers.Check(err, l, "Failed to generate container list")
+
+	l.Info("Getting Results for composition...")
+	resultsArray, err := aggregator.BatchGetScanResultsByTag(cl, *registryId, *baseRepo)
+	helpers.Check(err, l, "Failed to get results")
+
+	for r := range resultsArray {
+		results := *resultsArray[r].ImageScanFindings
+
+		singleReporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(r), fmt.Sprintf("%s/", *reportDir), *reporterList)
+
+		if singleReporterConfig.ReporterType == "junit" {
+			se := reporters.CreateXmlReport(r, *severityCutoff, results, singleReporterConfig, l)
+			helpers.Check(se, l, "Failed to write report for %s", r)
+		}
+
+	}
+}
+
+func doSingleReport(l logger.Logger) {
+
+	repositoryName := strings.Join([]string{*baseRepo, *containerName}, "/")
+	reporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(*containerName), fmt.Sprintf("%s/", *reportDir), *reporterList)
+
+	l.Info("Getting Results for composition...")
+	result, err := aggregator.EcrGetScanResultsByTag(repositoryName, *containerTag, *registryId)
+	helpers.Check(err, l, "Failed to get results")
+
+	if reporterConfig.ReporterType == "junit" {
+		l.Infof("Creating junit test report")
+		re := reporters.CreateXmlReport(repositoryName, *severityCutoff, *result.ImageScanFindings, reporterConfig, l)
+		helpers.Check(re, l, "Failed to write report for %s", *containerName)
+	}
 }
