@@ -6,25 +6,26 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/google/logger"
 	"strings"
 )
 
 var region = "eu-west-1"
 
-func BatchGetScanResultsByTag(repositories map[string]string, registryId string, prefix string) (map[string]*ecr.DescribeImageScanFindingsOutput, error) {
-	result := make(map[string]*ecr.DescribeImageScanFindingsOutput)
+func BatchGetScanResultsByTag(repositories map[string]string, registryId string, prefix string, l logger.Logger) (map[string]*ecr.DescribeImageScanFindingsOutput, error) {
+	results := make(map[string]*ecr.DescribeImageScanFindingsOutput)
 	var err error
 	for c, v := range repositories {
-
-		result[c], err = EcrGetScanResultsByTag(strings.Join([]string{prefix, c}, "/"), v, registryId)
-		if err != nil {
-			return nil, err
+		result, err := EcrGetScanResultsByTag(strings.Join([]string{prefix, c}, "/"), v, registryId, l)
+		if err == nil {
+			fmt.Printf("appending result for %s:%s \n", c, v)
+			results[c] = result
 		}
 	}
-	return result, err
+	return results, err
 }
 
-func EcrGetScanResultsByTag(repositoryName string, imageTag string, registryId string) (findings *ecr.DescribeImageScanFindingsOutput, err error) {
+func EcrGetScanResultsByTag(repositoryName string, imageTag string, registryId string, l logger.Logger) (findings *ecr.DescribeImageScanFindingsOutput, err error) {
 	s := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	}))
@@ -35,28 +36,33 @@ func EcrGetScanResultsByTag(repositoryName string, imageTag string, registryId s
 	}
 	result, err := svc.DescribeImageScanFindings(input)
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
+		if err, ok := err.(awserr.Error); ok {
+			switch err.Code() {
 			case ecr.ErrCodeServerException:
-				fmt.Println(ecr.ErrCodeServerException, aerr.Error())
+				l.Warningf("%s", err.Error())
 			case ecr.ErrCodeInvalidParameterException:
-				fmt.Println(ecr.ErrCodeInvalidParameterException, aerr.Error())
-			//TODO: handle missing repository or test result more gracefully (warn and skip if in batchmode)
+				l.Warningf("%s", err.Error())
 			case ecr.ErrCodeRepositoryNotFoundException:
-				fmt.Println(ecr.ErrCodeRepositoryNotFoundException, aerr.Error())
+				l.Warningf("%s", err.Error())
 			case ecr.ErrCodeScanNotFoundException:
-				fmt.Println(ecr.ErrCodeScanNotFoundException, aerr.Error())
+				l.Warningf("%s", err.Error())
 			default:
-				fmt.Println(aerr.Error())
+				fmt.Println(err.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			l.Fatalf("%e is no a recognized Error", err.Error())
 		}
-		return
+		return &ecr.DescribeImageScanFindingsOutput{
+			ImageId: input.ImageId,
+			ImageScanStatus: &ecr.ImageScanStatus{
+				Status:      aws.String("failed"),
+				Description: aws.String(err.Error()),
+			},
+		}, err
 	}
-	return result, nil
+	return result, err
 }
 
 func createImageScanFindingsInput(repositoryName string, imageTag string, registryId string) (input *ecr.DescribeImageScanFindingsInput, err error) {
