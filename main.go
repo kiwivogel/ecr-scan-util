@@ -53,7 +53,8 @@ func doCompositionBasedReports(composition string, l logger.Logger) {
 	helpers.Check(err, l, "Failed to generate container list")
 
 	l.Info("Getting Results for composition...")
-	resultsArray, err := aggregator.BatchGetScanResultsByTag(cl, *registryId, *baseRepo)
+	resultsArray, err := aggregator.BatchGetScanResultsByTag(cl, *registryId, *baseRepo, l)
+
 	helpers.Check(err, l, "Failed to get results")
 
 	for r := range resultsArray {
@@ -75,8 +76,12 @@ func doSingleReport(l logger.Logger) {
 	reporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(*containerName), fmt.Sprintf("%s/", *reportDir), *reporterList)
 
 	l.Info("Getting Results for composition...")
-	result, err := aggregator.EcrGetScanResultsByTag(repositoryName, *containerTag, *registryId)
-	helpers.Check(err, l, "Failed to get results")
+	result, err := aggregator.EcrGetScanResultsByTag(repositoryName, *containerTag, *registryId, l)
+	if err != nil && *result.ImageScanStatus.Status == "failed" {
+		l.Fatal("No results found for ", repositoryName, " ", err)
+	} else {
+		l.Infof("Got results")
+	}
 
 	if reporterConfig.ReporterType == "junit" {
 		l.Infof("Creating junit test report")
