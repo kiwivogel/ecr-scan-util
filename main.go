@@ -55,37 +55,41 @@ func doCompositionBasedReports(composition string, l logger.Logger) {
 	l.Info("Getting Results for composition...")
 	resultsArray, err := aggregator.BatchGetScanResultsByTag(cl, *registryId, *baseRepo, l)
 
-	helpers.Check(err, l, "Failed to get results")
+	helpers.Check(err, l, "Failed to get results. \n")
 
 	for r := range resultsArray {
-		results := *resultsArray[r].ImageScanFindings
+		if *resultsArray[r].ImageScanStatus.Status != "FAILED" {
+			results := *resultsArray[r].ImageScanFindings
+			singleReporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(r), fmt.Sprintf("%s/", *reportDir), *reporterList)
 
-		singleReporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(r), fmt.Sprintf("%s/", *reportDir), *reporterList)
-
-		if singleReporterConfig.ReporterType == "junit" {
-			se := reporters.CreateXmlReport(r, *severityCutoff, results, singleReporterConfig, l)
-			helpers.Check(se, l, "Failed to write report for %s", r)
+			l.Info("Passing results to writer for ", r)
+			if singleReporterConfig.ReporterType == "junit" {
+				se := reporters.CreateXmlReport(r, *severityCutoff, results, singleReporterConfig, l)
+				helpers.Check(se, l, "Failed to write report for %s", r)
+			}
+		} else {
+			l.Warning("No results found for ", &resultsArray[r].RepositoryName, "Skipping")
 		}
-
 	}
 }
 
 func doSingleReport(l logger.Logger) {
-
 	repositoryName := strings.Join([]string{*baseRepo, *containerName}, "/")
 	reporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(*containerName), fmt.Sprintf("%s/", *reportDir), *reporterList)
 
-	l.Info("Getting Results for composition...")
+	l.Info("Getting Results for container...")
 	result, err := aggregator.EcrGetScanResultsByTag(repositoryName, *containerTag, *registryId, l)
-	if err != nil && *result.ImageScanStatus.Status == "failed" {
-		l.Fatal("No results found for ", repositoryName, " ", err)
-	} else {
+	helpers.Check(err, l, "Failed to get results. \n")
+	if *result.ImageScanStatus.Status != "FAILED" {
+
 		l.Infof("Got results")
+		if reporterConfig.ReporterType == "junit" {
+			l.Infof("Creating junit test report")
+			re := reporters.CreateXmlReport(repositoryName, *severityCutoff, *result.ImageScanFindings, reporterConfig, l)
+			helpers.Check(re, l, "Failed to write report for %s", *containerName)
+		}
+	} else {
+		l.Fatalf("Scan failed for %s: %v", repositoryName, result.ImageScanStatus.Description)
 	}
 
-	if reporterConfig.ReporterType == "junit" {
-		l.Infof("Creating junit test report")
-		re := reporters.CreateXmlReport(repositoryName, *severityCutoff, *result.ImageScanFindings, reporterConfig, l)
-		helpers.Check(re, l, "Failed to write report for %s", *containerName)
-	}
 }
