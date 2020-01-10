@@ -11,6 +11,7 @@ pipeline {
                         returnStdout: true,
                         script: 'echo ${COMPONENT_NAME}_${GOOS}_${GOARCH}'
                       )}"""
+        def ARGUMENTS = "--composition test-comp.yml"
     }
 
     options {
@@ -22,9 +23,6 @@ pipeline {
     agent { label Agent.golang }
     tools {
         go "Go 1.13.5"
-    }
-    parameters {
-        string(name: 'ARGUMENTS', defaultValue: '', 'Arguments to run tool with' )
     }
     stages {
         stage('Go Build'){
@@ -46,7 +44,7 @@ pipeline {
                 with_ecr_credentials {
                     sh '''#!/bin/bash
                         echo "Running ${TARGET}..."
-                        ./${TARGET} ${params.ARGUMENTS}
+                        ./${TARGET} ${ARGUMENTS}
                         '''
                 }
             }
