@@ -11,7 +11,7 @@ pipeline {
                         returnStdout: true,
                         script: 'echo ${COMPONENT_NAME}_${GOOS}_${GOARCH}'
                       )}"""
-        def ARGUMENTS = "--composition test-comp.yml"
+        def ARGUMENTS = "--composition test-versionstripper.yml"
     }
 
     options {
