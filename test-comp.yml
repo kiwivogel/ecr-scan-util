@@ -1,0 +1,4 @@
+redis_version: '3.2.6'                      #test generic component
+zd_version_kotlin_version: '20191205_0738'  #tests edgecase with version in name
+does_not_exist: 'doesnotmatter'             #this does not exist
+postgres-exporter: '20200108_1004'          #this contains a failed test
