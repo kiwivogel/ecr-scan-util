@@ -1,5 +1,4 @@
 postgres-exporter: '20200108_1004'
 zd_version_kotlin_version: '20191205_0738'
-redis_version: '3.2.6'
 postgres_version: '9.5-17'
 clamav_version: '20200106_0736'
