@@ -32,7 +32,7 @@ func main() {
 
 	kingpin.Parse()
 
-	L := logger.Init("ESA Logger", *verbose, true, ioutil.Discard)
+	L := logger.Init("ESA Logger", *verbose, false, ioutil.Discard)
 	logger.SetFlags(log.LUTC)
 
 	if *composition != "" {
