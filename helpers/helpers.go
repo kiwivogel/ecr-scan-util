@@ -102,7 +102,17 @@ func timeStamper() string {
 }
 
 func versionStripper(input string) (output string) {
-	return strings.Replace(input, "_version", "", 1)
+
+	strip := "_version"
+	//We have to do some extra work because some containers we run
+	//use version in the middle of their name which we can't strip.
+
+	i := strings.LastIndex(input, strip)
+	if i != -1 {
+		return input[:i] + strings.Replace(input[i:], strip, "", 1)
+	} else {
+		return input
+	}
 }
 
 func underscoreHyphenator(input string) (output string) {
