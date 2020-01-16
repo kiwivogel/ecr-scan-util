@@ -1,4 +1,4 @@
 esa_*
 *.yml
-!test-*.yml
 /reports/
+!test-*.yml
