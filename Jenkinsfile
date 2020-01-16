@@ -1,60 +1,15 @@
-library('jenkins-shared-library')
+library 'jenkins-shared-library@master'
 
-pipeline {
+pipeline_component(
+    pipeline_libraries: [
+        [library: lib_custom_build_script, config: [build_tool: 'sbt']]
+    ],
 
-    environment {
-        def COMPONENT_NAME = "esa"
-        def GO111MODULE = 'on'
-        def GOARCH = "amd64"
-        def GOOS = "linux"
-        def TARGET = """${sh(
-                        returnStdout: true,
-                        script: 'echo ${COMPONENT_NAME}_${GOOS}_${GOARCH}'
-                      )}"""
-        def ARGUMENTS = "--composition test-comp.yml"
-    }
+    project_config: [
+        name: 'ecr-scan-util',
 
-    options {
-        ansiColor('xterm')
-        timestamps()
-        buildDiscarder(logRotator(numToKeepStr: '15'))
-        disableConcurrentBuilds()
-    }
-    agent { label Agent.golang }
-    tools {
-        go "Go 1.13.5"
-    }
-    stages {
-        stage('Go Build'){
-            steps {
-                set_build_version()
-                sh '''#!/bin/bash
-                    set -e
-                    echo "Getting modules"
-                    go mod download
-                    echo "Compiling..."
-                    go build -o ${TARGET}
-                    echo "Done"
-                    chmod +x ${TARGET}
-                    '''
-            }
-        }
-        stage('Go Run') {
-            steps {
-                with_ecr_credentials {
-                    sh '''#!/bin/bash
-                        echo "Running ${TARGET}..."
-                        ./${TARGET} ${ARGUMENTS}
-                        '''
-                }
-            }
-        }
-    }
-    post {
-        always {
-            junit 'reports/*.xml'
-            default_post_actions()
-            wrap([$class: 'MesosSingleUseSlave']) {}
-        }
-    }
-}
+        deployables: [
+            _: 'ecr-scan-util'
+        ]
+    ]
+)
