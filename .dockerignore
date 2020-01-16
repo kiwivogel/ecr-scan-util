@@ -1,0 +1,7 @@
+#Ignore stuff we don't need for building
+reports
+README.md
+*.yml
+Jenkinsfile
+.gitignore
+build.sh
