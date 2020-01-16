@@ -124,7 +124,7 @@ func createTestCase(cutoff string, finding ecr.ImageScanFinding) (testCase JUnit
 		testCase.PassedMessage = newPassedMessage(*finding.Name, *finding.Severity, cutoff)
 		testCase.FailureMessage = nil
 	} else {
-		if *(&finding.Description) != nil {
+		if finding.Description != nil {
 			testCase.FailureMessage = newFailedMessage(*finding.Name, *finding.Severity, cutoff, *finding.Description)
 		} else {
 			testCase.FailureMessage = newFailedMessage(*finding.Name, *finding.Severity, cutoff, "No description provided")
