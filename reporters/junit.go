@@ -115,7 +115,7 @@ func createTestCase(cutoff string, finding ecr.ImageScanFinding) (testCase JUnit
 	}
 	testCase = JUnitTestCase{
 		Name:      *finding.Name,
-		ClassName: packageString,
+		ClassName: fmt.Sprintf("%s: %s", *finding.Name, packageString),
 		Skipped:   nil,
 		Time:      0,
 		SystemOut: "",
