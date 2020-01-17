@@ -28,7 +28,12 @@ RUN cp /build/ecr-scan-util ./ecr-scan-util
 RUN mkdir /data
 
 # Create the minimal runtime image, We're using jarlefosen's image because this contains neccesary SSL root certs.
-FROM  jarlefosen/itch
+FROM  alpine
+
+RUN mkdir /user && \
+    echo 'nobody:x:65534:65534:nobody:/:' > /user/passwd && \
+    echo 'nobody:x:65534:' > /user/group && \
+    apk add --no-cache ca-certificates tzdata
 
 COPY --chown=0:0 --from=builder /dist /
 
