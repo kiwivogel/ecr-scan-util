@@ -62,7 +62,7 @@ func newTestSuite(container string, cutoff string, findings ecr.ImageScanFinding
 		Time:      0,
 	}
 	for f := range findings.Findings {
-		testSuite.TestCases = append(testSuite.TestCases, createTestCase(cutoff, *findings.Findings[f]))
+		testSuite.TestCases = append(testSuite.TestCases, createTestCase(cutoff, container, *findings.Findings[f]))
 	}
 	return testSuite
 }
@@ -105,7 +105,7 @@ func hasPassedCutoff(cutoff string, severity string) bool {
 	return !(severityMap[severity] >= severityMap[cutoff])
 }
 
-func createTestCase(cutoff string, finding ecr.ImageScanFinding) (testCase JUnitTestCase) {
+func createTestCase(cutoff string, container string, finding ecr.ImageScanFinding) (testCase JUnitTestCase) {
 	passed := hasPassedCutoff(cutoff, *finding.Severity)
 	packageName, err := helpers.ExtractPackageAttributes("package_name", &finding)
 	packageVersion, err := helpers.ExtractPackageAttributes("package_version", &finding)
@@ -114,7 +114,7 @@ func createTestCase(cutoff string, finding ecr.ImageScanFinding) (testCase JUnit
 		panic(err)
 	}
 	testCase = JUnitTestCase{
-		Name:      *finding.Name,
+		Name:      container,
 		ClassName: packageString,
 		Skipped:   nil,
 		Time:      0,
