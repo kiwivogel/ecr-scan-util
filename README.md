@@ -2,16 +2,18 @@
 POC for aggregating/massaging output of ECR scans
 ```
 Flags:
-  --help                       Show context-sensitive help (also try --help-long and --help-man).
-  --composition=""             ZD Composition file to load when running batch mode.
-  --repository=""              Aws ecr repository id. Uses default when omitted.
-  --baserepo=""                Common prefix for images. E.g. zorgdomein
-  --container=""               Container name to fetch scan results for
-  --tag=""                     Container tag or hash to fetch scan results for
-  --directory="reports"        Directory to write reports to
-  --cutoff="MEDIUM"            Severity to count as failures
-  --verbose                    log actions to stdout
-  --reporter="junit"           Reporter(s) to use
+  --help                     Show context-sensitive help (also try --help-long and --help-man).
+  --repository=""            Aws ecr repository id. Uses default when omitted.
+  --composition=             ZD Composition file to load when running batch mode.
+  --strip-prefix=""          Prefix string to strip while composition entries. Removes first occurrence of substring.
+  --strip-suffix="_version"  Suffix string to strip while composition entries. Removes last occurrence of substring.
+  --baserepo=""              Prefix for images. will be prefixed onto entries in composition or containername supplied .
+  --container=""             Container name to fetch scan results for
+  --tag=""                   Container tag to fetch scan results for
+  --directory="reports"      Directory to write reports to
+  --cutoff="MEDIUM"          Severity to count as failures
+  --verbose                  log actions to stdout
+  --reporter="junit"         Reporter(s) to use
 ```
 
 ### composition: reads a yaml file with format: 

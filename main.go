@@ -13,19 +13,21 @@ import (
 )
 
 var (
-	composition    = kingpin.Flag("composition", "ZD Composition file to load when running batch mode.").Envar("ESU_COMPOSITION_FILE").Default("").ExistingFile()
-	stripPrefix    = kingpin.Flag("strip-prefix", "Prefix string to strip while composition entries. Removes first occurrence of substring").Default("").String()
-	stripSuffix    = kingpin.Flag("strip-suffix", "Suffix string to strip while composition entries. Removes last occurrence of substring.").Default("_version").String()
-	registryId     = kingpin.Flag("repository", "Aws ecr repository id. Uses default when omitted.").Envar("ESU_ECR_REGISTRY_ID").Default("").String()
-	baseRepo       = kingpin.Flag("baserepo", "Common prefix for images. E.g. zorgdomein").Envar("ESU_ECR_BASE_REPO").Default("zorgdomein").String()
-	containerName  = kingpin.Flag("container", "Container name to fetch scan results for").Envar("ESU_ECR_CONTAINER_NAME").Default("nexus").String()
-	containerTag   = kingpin.Flag("tag", "Container tag or hash to fetch scan results for").Envar("ESU_ECR_CONTAINER_IDENTIFIER").Default("2.14.12-02-30102019").String()
+	registryId = kingpin.Flag("repository", "Aws ecr repository id. Uses default when omitted.").Envar("ESU_ECR_REGISTRY_ID").Default("").String()
+	// The following Options are used together to parse a composition file in yaml format.
+	composition   = kingpin.Flag("composition", "ZD Composition file to load when running batch mode.").Envar("ESU_COMPOSITION_FILE").Default("").ExistingFile()
+	stripPrefix   = kingpin.Flag("strip-prefix", "Prefix string to strip while composition entries. Removes first occurrence of substring.").Default("").String()
+	stripSuffix   = kingpin.Flag("strip-suffix", "Suffix string to strip while composition entries. Removes last occurrence of substring.").Default("_version").String()
+	baseRepo      = kingpin.Flag("baserepo", "Prefix for images. will be prefixed onto entries in composition or containername supplied .").Envar("ESU_ECR_BASE_REPO").Default("").String()
+	containerName = kingpin.Flag("container", "Container name to fetch scan results for").Envar("ESU_ECR_CONTAINER_NAME").Default("").String()
+	containerTag  = kingpin.Flag("tag", "Container tag to fetch scan results for").Envar("ESU_ECR_CONTAINER_IDENTIFIER").Default("").String()
+	//TODO: Implement hash based findings, Probably requires further abstraction of *ecrDescribeImageScanFindingsInput
+	//containerHash =  kingpin.Flag("hash", "Container hash to fetch scan results for").Envar("ESU_ECR_CONTAINER_HASH").String()
+
 	reportDir      = kingpin.Flag("directory", "Directory to write reports to").Envar("ESU_REPORT_DIR").Default("reports").String()
 	severityCutoff = kingpin.Flag("cutoff", "Severity to count as failures").Envar("ESU_SEVERITY_CUTOFF").Default("MEDIUM").String()
 	verbose        = kingpin.Flag("verbose", "log actions to stdout").Envar("ESU_VERBOSE_BOOL").Default("true").Bool()
-	//TODO: Implement hash based findings, Probably requires further abstraction of *ecrDescribeImageScanFindingsInput
-	//containerHash =  kingpin.Flag("hash", "Container hash to fetch scan results for").Envar("ESU_ECR_CONTAINER_HASH").String()
-	reporterList = kingpin.Flag("reporter", "Reporter(s) to use").Envar("ESU_REPORTERS").Default("junit").String()
+	reporterList   = kingpin.Flag("reporter", "Reporter(s) to use").Envar("ESU_REPORTERS").Default("junit").String()
 	//TODO: make reporter config read a fucking yaml as option.
 	//reporterConfigFile = kingpin.Flag("reporter", "Configuration file for configuring reporters").Envar("ESU_REPORTER_CONFIG").Default("").String()
 )
