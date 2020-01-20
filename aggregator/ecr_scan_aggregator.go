@@ -45,6 +45,8 @@ func EcrGetScanResultsByTag(repositoryName string, imageTag string, registryId s
 				l.Warningf("%s", err.Error())
 			case ecr.ErrCodeScanNotFoundException:
 				l.Warningf("%s", err.Error())
+			case ecr.ErrCodeImageNotFoundException:
+				l.Warningf("%s", err.Error())
 			default:
 				fmt.Println(err.Error())
 			}
