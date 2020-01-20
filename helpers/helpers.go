@@ -108,10 +108,10 @@ func suffixStripper(input string, suffix string) (output string) {
 
 	i := strings.LastIndex(input, suffix)
 	if i != -1 {
-		input = input[:i] + strings.Replace(input[i:], suffix, "", 1)
+		return input[:i] + strings.Replace(input[i:], suffix, "", 1)
+	} else {
+		return input
 	}
-
-	return input
 }
 
 func prefixStripper(input string, prefix string) (output string) {
