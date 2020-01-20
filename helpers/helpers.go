@@ -53,7 +53,7 @@ func CheckAndExit(e error, logger logger.Logger, a ...interface{}) {
 		os.Exit(1)
 	}
 }
-func CompositionParser(compositionFile string, stripArray []string, l logger.Logger) (map[string]string, error) {
+func CompositionParser(compositionFile string, stripPrefix string, stripSuffix string, l logger.Logger) (map[string]string, error) {
 	zdComposition := make(map[string]string)
 	containerList := make(map[string]string)
 
@@ -66,7 +66,7 @@ func CompositionParser(compositionFile string, stripArray []string, l logger.Log
 	Check(err, l, "Failed to unmarshal %s, %v", yamlFile, err)
 
 	for c, v := range zdComposition {
-		c = underscoreHyphenator(tagStripper(c, stripArray))
+		c = underscoreHyphenator(suffixStripper(prefixStripper(c, stripPrefix), stripSuffix))
 		containerList[c] = v
 	}
 
@@ -101,20 +101,24 @@ func timeStamper() string {
 	return strings.Replace(t, " ", "", -1)
 }
 
-func tagStripper(input string, stripArray []string) (output string) {
+func suffixStripper(input string, suffix string) (output string) {
 
 	//We have to do some extra work because some containers we run
 	//use version in the middle of their name which we can't strip.
 
-	for _, sA := range stripArray {
-
-		i := strings.LastIndex(input, sA)
-		if i != -1 {
-			input = input[:i] + strings.Replace(input[i:], sA, "", 1)
-		}
-
+	i := strings.LastIndex(input, suffix)
+	if i != -1 {
+		input = input[:i] + strings.Replace(input[i:], suffix, "", 1)
 	}
+
 	return input
+}
+
+func prefixStripper(input string, prefix string) (output string) {
+
+	//prefix stripper doesn't just removes the first instance
+
+	return strings.Replace(input, prefix, "", 1)
 }
 
 func underscoreHyphenator(input string) (output string) {
