@@ -53,7 +53,7 @@ func CheckAndExit(e error, logger logger.Logger, a ...interface{}) {
 		os.Exit(1)
 	}
 }
-func CompositionParser(compositionFile string, l logger.Logger) (map[string]string, error) {
+func CompositionParser(compositionFile string, stripArray []string, l logger.Logger) (map[string]string, error) {
 	zdComposition := make(map[string]string)
 	containerList := make(map[string]string)
 
@@ -66,7 +66,7 @@ func CompositionParser(compositionFile string, l logger.Logger) (map[string]stri
 	Check(err, l, "Failed to unmarshal %s, %v", yamlFile, err)
 
 	for c, v := range zdComposition {
-		c = underscoreHyphenator(versionStripper(c))
+		c = underscoreHyphenator(tagStripper(c, stripArray))
 		containerList[c] = v
 	}
 
@@ -101,18 +101,20 @@ func timeStamper() string {
 	return strings.Replace(t, " ", "", -1)
 }
 
-func versionStripper(input string) (output string) {
+func tagStripper(input string, stripArray []string) (output string) {
 
-	strip := "_version"
 	//We have to do some extra work because some containers we run
 	//use version in the middle of their name which we can't strip.
 
-	i := strings.LastIndex(input, strip)
-	if i != -1 {
-		return input[:i] + strings.Replace(input[i:], strip, "", 1)
-	} else {
-		return input
+	for _, sA := range stripArray {
+
+		i := strings.LastIndex(input, sA)
+		if i != -1 {
+			input = input[:i] + strings.Replace(input[i:], sA, "", 1)
+		}
+
 	}
+	return input
 }
 
 func underscoreHyphenator(input string) (output string) {

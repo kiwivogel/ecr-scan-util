@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	composition    = kingpin.Flag("composition", "ZD Composition file to load when running batch mode.").Envar("ESU_COMPOSITION_FILE").Default("").String()
+	composition    = kingpin.Flag("composition", "ZD Composition file to load when running batch mode.").Envar("ESU_COMPOSITION_FILE").Default("").ExistingFile()
+	stripStrings   = kingpin.Flag("strip", "Strings to strip from parsed composition. Removes trailing element first.").Envar("ESU_COMPOSITION_FILE").Default("_version").String()
 	registryId     = kingpin.Flag("repository", "Aws ecr repository id. Uses default when omitted.").Envar("ESU_ECR_REGISTRY_ID").Default("").String()
 	baseRepo       = kingpin.Flag("baserepo", "Common prefix for images. E.g. zorgdomein").Envar("ESU_ECR_BASE_REPO").Default("zorgdomein").String()
 	containerName  = kingpin.Flag("container", "Container name to fetch scan results for").Envar("ESU_ECR_CONTAINER_NAME").Default("nexus").String()
@@ -49,7 +50,7 @@ func main() {
 
 func doCompositionBasedReports(composition string, l logger.Logger) {
 	l.Info("Reading Composition...")
-	cl, err := helpers.CompositionParser(composition, l)
+	cl, err := helpers.CompositionParser(composition, strings.Split(*stripStrings, ","), l)
 	helpers.Check(err, l, "Failed to generate container list")
 
 	l.Info("Getting Results for composition...")
