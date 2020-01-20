@@ -14,8 +14,8 @@ import (
 
 var (
 	composition    = kingpin.Flag("composition", "ZD Composition file to load when running batch mode.").Envar("ESU_COMPOSITION_FILE").Default("").ExistingFile()
-	stripPrefix    = kingpin.Flag("strip", "Prefix string to strip while composition entries. Removes first occurrence of substring").Default("").String()
-	stripSuffix    = kingpin.Flag("strip", "Suffix string to strip while composition entries. Removes last occurrence of substring.").Default("_version").String()
+	stripPrefix    = kingpin.Flag("strip-prefix", "Prefix string to strip while composition entries. Removes first occurrence of substring").Default("").String()
+	stripSuffix    = kingpin.Flag("strip-suffix", "Suffix string to strip while composition entries. Removes last occurrence of substring.").Default("_version").String()
 	registryId     = kingpin.Flag("repository", "Aws ecr repository id. Uses default when omitted.").Envar("ESU_ECR_REGISTRY_ID").Default("").String()
 	baseRepo       = kingpin.Flag("baserepo", "Common prefix for images. E.g. zorgdomein").Envar("ESU_ECR_BASE_REPO").Default("zorgdomein").String()
 	containerName  = kingpin.Flag("container", "Container name to fetch scan results for").Envar("ESU_ECR_CONTAINER_NAME").Default("nexus").String()
