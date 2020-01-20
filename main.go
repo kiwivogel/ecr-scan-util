@@ -68,7 +68,7 @@ func doCompositionBasedReports(composition string, l logger.Logger) {
 				helpers.Check(se, l, "Failed to write report for %s", r)
 			}
 		} else {
-			l.Warning("No results found for ", &resultsArray[r].RepositoryName, "Skipping")
+			l.Warning("No results found for ", *resultsArray[r].RepositoryName, " Skipping")
 		}
 	}
 }
