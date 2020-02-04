@@ -14,6 +14,7 @@ Flags:
   --cutoff="MEDIUM"          Severity to count as failures
   --verbose                  log actions to stdout
   --reporter="junit"         Reporter(s) to use
+
 ```
 
 ### composition: reads a yaml file with format: 
