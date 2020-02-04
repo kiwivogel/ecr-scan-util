@@ -60,7 +60,7 @@ func doCompositionBasedReports(settings *helpers.CompositionConfig, l logger.Log
 	helpers.Check(err, l, "Failed to generate container list")
 
 	for i := range cl {
-		_ := doSingleReport(cl[i], l)
+		_ = doSingleReport(cl[i], l)
 	}
 
 }
