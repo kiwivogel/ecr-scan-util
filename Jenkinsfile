@@ -2,7 +2,7 @@ library 'jenkins-shared-library@master'
 
 pipeline_component(
     pipeline_libraries: [
-        [library: lib_custom_build_script, config: [build_tool: 'sbt']]
+        [library: lib_custom_build_script, config: [build_tool: 'golang']]
     ],
 
     project_config: [

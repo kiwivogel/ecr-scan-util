@@ -20,11 +20,36 @@ type ReporterConfig struct {
 	ReportBaseDir  string
 }
 
-func NewDefaultReporterConfig() (config ReporterConfig) {
+type CompositionConfig struct {
+	CompositionFileName string
+	BaseRepo            string
+	StripPrefix         string
+	StripSuffix         string
+}
+
+func NewDefaultReporterConfig() ReporterConfig {
 	return ReporterConfig{
 		ReportFileName: "testreport.xml",
 		ReporterType:   "junit",
 		ReportBaseDir:  "reports",
+	}
+}
+
+func NewDefaultCompositionConfig(compositionFile *string, baseRepo *string, stripPrefix *string, stripSuffix *string) CompositionConfig {
+	return CompositionConfig{
+		CompositionFileName: *compositionFile,
+		BaseRepo:            *baseRepo,
+		StripPrefix:         *stripPrefix,
+		StripSuffix:         *stripSuffix,
+	}
+}
+func NewImageDefinition(repositoryName string, imageTag string) (image ecr.Image) {
+	return ecr.Image{
+		ImageId: &ecr.ImageIdentifier{
+			ImageTag: &imageTag,
+		},
+		RegistryId:     aws.String(""),
+		RepositoryName: aws.String(repositoryName),
 	}
 }
 
@@ -53,24 +78,29 @@ func CheckAndExit(e error, logger logger.Logger, a ...interface{}) {
 		os.Exit(1)
 	}
 }
-func CompositionParser(compositionFile string, stripPrefix string, stripSuffix string, l logger.Logger) (map[string]string, error) {
+func CompositionParser(s *CompositionConfig, l logger.Logger) ([]ecr.Image, error) {
+	// This takes the configuration file (as passed via struct) and returns a list of generic
+	// container objects that can be used as input when interacting with the ECR endpoints.
+	// Currently only uses tag identifiers. TODO: Abstract further to allow working with hashes.
+
 	zdComposition := make(map[string]string)
-	containerList := make(map[string]string)
+	imageList := make([]ecr.Image, 0)
 
-	l.Infof("trying to read container names and identifiers from %s", compositionFile)
-	yamlFile, err := ioutil.ReadFile(compositionFile)
-	Check(err, l, "Failed to read file %s: %s", compositionFile, err)
+	l.Infof("trying to read container names and identifiers from %s", s.CompositionFileName)
+	yamlFile, err := ioutil.ReadFile(s.CompositionFileName)
+	Check(err, l, "Failed to read file %s: %s", s.CompositionFileName, err)
 
-	l.Infof("unmarshalling contents of %s", compositionFile)
+	l.Infof("unmarshalling contents of %s", s.CompositionFileName)
 	err = yaml.Unmarshal(yamlFile, zdComposition)
 	Check(err, l, "Failed to unmarshal %s, %v", yamlFile, err)
 
 	for c, v := range zdComposition {
-		c = underscoreHyphenator(suffixStripper(prefixStripper(c, stripPrefix), stripSuffix))
-		containerList[c] = v
+		c = underscoreHyphenator(suffixStripper(prefixStripper(c, s.StripPrefix), s.StripSuffix))
+		image := NewImageDefinition(strings.Join([]string{s.BaseRepo, c}, "/"), v)
+		imageList = append(imageList, image)
 	}
 
-	return containerList, err
+	return imageList, err
 }
 
 func ExtractPackageAttributes(query string, finding *ecr.ImageScanFinding) (attribute string, err error) {
