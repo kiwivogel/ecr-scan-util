@@ -7,29 +7,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/google/logger"
-	"strings"
 )
 
 var region = "eu-west-1"
 
-func BatchGetScanResultsByTag(repositories map[string]string, registryId string, prefix string, l logger.Logger) (map[string]*ecr.DescribeImageScanFindingsOutput, error) {
-	results := make(map[string]*ecr.DescribeImageScanFindingsOutput)
-	var err error
-	for c, v := range repositories {
-		result, err := EcrGetScanResultsByTag(strings.Join([]string{prefix, c}, "/"), v, registryId, l)
-		if err == nil {
-			results[c] = result
-		}
-	}
-	return results, err
-}
-
-func EcrGetScanResultsByTag(repositoryName string, imageTag string, registryId string, l logger.Logger) (result *ecr.DescribeImageScanFindingsOutput, err error) {
+func EcrGetScanResults(image ecr.Image, l logger.Logger) (result *ecr.DescribeImageScanFindingsOutput, err error) {
 	s := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	}))
 	svc := ecr.New(s)
-	input, err := createImageScanFindingsInput(repositoryName, imageTag, registryId)
+	input, err := createImageScanFindingsInput(image)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -66,16 +53,14 @@ func EcrGetScanResultsByTag(repositoryName string, imageTag string, registryId s
 	return result, err
 }
 
-func createImageScanFindingsInput(repositoryName string, imageTag string, registryId string) (input *ecr.DescribeImageScanFindingsInput, err error) {
+func createImageScanFindingsInput(image ecr.Image) (input *ecr.DescribeImageScanFindingsInput, err error) {
 	input = &ecr.DescribeImageScanFindingsInput{
-		RepositoryName: aws.String(repositoryName),
-		ImageId: &ecr.ImageIdentifier{
-			ImageTag: aws.String(imageTag),
-		},
-		MaxResults: aws.Int64(1000), //to avoid paginated results with more than 100 but less than 1000 results.
+		RepositoryName: image.RepositoryName,
+		ImageId:        image.ImageId,
+		MaxResults:     aws.Int64(1000), //to avoid paginated results with more than 100 but less than 1000 results.
 	}
-	if registryId != "" {
-		input.RegistryId = aws.String(registryId)
+	if *image.RegistryId != "" {
+		input.RegistryId = image.RegistryId
 	}
 	return input, err
 }
