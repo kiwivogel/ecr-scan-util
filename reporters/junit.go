@@ -107,6 +107,10 @@ func hasPassedCutoff(cutoff string, severity string) bool {
 
 func createTestCase(cutoff string, container string, finding ecr.ImageScanFinding) (testCase JUnitTestCase) {
 	passed := hasPassedCutoff(cutoff, *finding.Severity)
+
+	whitelisted := false
+	query := "bestaatniet"
+
 	packageName, err := helpers.ExtractPackageAttributes("package_name", &finding)
 	packageVersion, err := helpers.ExtractPackageAttributes("package_version", &finding)
 	packageString := fmt.Sprintf("%s@%s", packageName, packageVersion)
@@ -121,28 +125,40 @@ func createTestCase(cutoff string, container string, finding ecr.ImageScanFindin
 		SystemOut: "",
 	}
 	if passed {
-		testCase.PassedMessage = newPassedMessage(*finding.Name, *finding.Severity, cutoff)
+		testCase.PassedMessage = newGenericPassedMessage("Vulnerability %s with severity %s below cutoff %s. PASSED!",
+			*finding.Name, *finding.Severity, cutoff)
 		testCase.FailureMessage = nil
 	} else {
-		if finding.Description != nil {
-			testCase.FailureMessage = newFailedMessage(*finding.Name, *finding.Severity, cutoff, *finding.Description)
+		if !whitelisted {
+			if finding.Description != nil {
+				testCase.FailureMessage = newGenericFailedMessage(*finding.Severity,
+					"Vulnerability %s of severity %s above cutoff %s. FAILED! Description: %s",
+					*finding.Name, *finding.Severity, cutoff, *finding.Description)
+			} else {
+				testCase.FailureMessage = newGenericFailedMessage(*finding.Severity,
+					"Vulnerability %s of severity %s above cutoff %s. FAILED! Description: %s",
+					*finding.Name, *finding.Severity, cutoff, "No description provided")
+			}
+			testCase.PassedMessage = nil
 		} else {
-			testCase.FailureMessage = newFailedMessage(*finding.Name, *finding.Severity, cutoff, "No description provided")
+			testCase.PassedMessage = newGenericPassedMessage("Vulnerability %s with severity %s matches queried pattern %s. PASSED!",
+				*finding.Name, *finding.Severity, query)
+
 		}
-		testCase.PassedMessage = nil
 	}
 	return testCase
 }
 
-func newPassedMessage(name string, severity string, cutoff string) *JUnitPassedMessage {
+func newGenericPassedMessage(template string, m ...interface{}) *JUnitPassedMessage {
 	return &JUnitPassedMessage{
-		Message: fmt.Sprintf("Vulnerability %s with severity %s below cutoff %s. PASSED!", name, severity, cutoff),
+		Message: fmt.Sprintf(template, m...),
 	}
 }
-func newFailedMessage(name string, severity string, cutoff string, description string) *JUnitFailureMessage {
+
+func newGenericFailedMessage(severity string, template string, m ...interface{}) *JUnitFailureMessage {
 	return &JUnitFailureMessage{
 		Type:    severity,
-		Message: fmt.Sprintf("Vulnerability %s of severity %s above cutoff %s. FAILED! Description: %s", name, severity, cutoff, description),
+		Message: fmt.Sprintf(template, m...),
 	}
 }
 
