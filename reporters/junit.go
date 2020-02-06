@@ -127,23 +127,14 @@ func createTestCase(cutoff string, container string, finding ecr.ImageScanFindin
 	if passed {
 		testCase.PassedMessage = newGenericPassedMessage("Vulnerability %s with severity %s below cutoff %s. PASSED!",
 			*finding.Name, *finding.Severity, cutoff)
-		testCase.FailureMessage = nil
 	} else {
 		if !whitelisted {
-			if finding.Description != nil {
-				testCase.FailureMessage = newGenericFailedMessage(*finding.Severity,
-					"Vulnerability %s of severity %s above cutoff %s. FAILED! Description: %s",
-					*finding.Name, *finding.Severity, cutoff, *finding.Description)
-			} else {
-				testCase.FailureMessage = newGenericFailedMessage(*finding.Severity,
-					"Vulnerability %s of severity %s above cutoff %s. FAILED! Description: %s",
-					*finding.Name, *finding.Severity, cutoff, "No description provided")
-			}
-			testCase.PassedMessage = nil
+			testCase.FailureMessage = newGenericFailedMessage(*finding.Severity,
+				"Vulnerability %s of severity %s above cutoff %s. FAILED! Description: %s",
+				*finding.Name, *finding.Severity, cutoff, helpers.StringPointerChecker(finding.Description, "No description provided"))
 		} else {
 			testCase.PassedMessage = newGenericPassedMessage("Vulnerability %s with severity %s matches queried pattern %s. PASSED!",
 				*finding.Name, *finding.Severity, query)
-
 		}
 	}
 	return testCase

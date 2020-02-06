@@ -122,6 +122,16 @@ func FileNameFormatter(filename string) string {
 	return path.Base(fmt.Sprintf("%s-%s.xml", filename, timeStamper()))
 }
 
+// StringPointerChecker guards against nil pointer issues and returns a message in case pointer is nil to avoid issues
+// with optional fields.
+func StringPointerChecker(pointer *string, message string) string {
+	if pointer == nil {
+		return message
+	} else {
+		return *pointer
+	}
+}
+
 func timeStamper() string {
 	t := time.Now().Format(time.RFC3339)
 	t = strings.Replace(t, "Z", "", 1)
