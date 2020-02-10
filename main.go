@@ -17,6 +17,7 @@ var (
 	registryId = kingpin.Flag("repository", "Aws ecr repository id. Uses default when omitted.").Envar("ESU_ECR_REGISTRY_ID").Default("").String()
 	// The following Options are used together to parse a composition file in yaml format.
 	composition   = kingpin.Flag("composition", "ZD Composition file to load when running batch mode.").Envar("ESU_COMPOSITION_FILE").Default("").String()
+	whitelistfile = kingpin.Flag("whitelist", "Whitelist file containing package substrings to ignore per image and/or globally").Envar("ESU_WHITELIST_FILE").Default("").String()
 	stripPrefix   = kingpin.Flag("strip-prefix", "Prefix string to strip while composition entries. Removes first occurrence of substring.").Default("").String()
 	stripSuffix   = kingpin.Flag("strip-suffix", "Suffix string to strip while composition entries. Removes last occurrence of substring.").Default("_version").String()
 	baseRepo      = kingpin.Flag("baserepo", "Prefix for images. will be prefixed onto entries in composition or containername supplied .").Envar("ESU_ECR_BASE_REPO").Default("").String()
@@ -40,34 +41,43 @@ func main() {
 	L := logger.Init("ESU Logger", *verbose, false, ioutil.Discard)
 	logger.SetFlags(log.LUTC)
 
+	whitelist, err := helpers.CreateWhitelist(*whitelistfile, *L)
+	helpers.Check(err, *L, "Failed to return whitelist.")
+
 	if *composition != "" {
 		config := helpers.NewDefaultCompositionConfig(composition, baseRepo, stripPrefix, stripSuffix)
-		doCompositionBasedReports(&config, *L)
+		doCompositionBasedReports(&config, &whitelist, *L)
 
 	} else {
 		repositoryName := strings.Join([]string{*baseRepo, *containerName}, "/")
 
 		image := helpers.NewImageDefinition(repositoryName, *containerTag)
 
-		_ = doSingleReport(image, *L)
+		_ = doSingleReport(image, &whitelist, *L)
 	}
 
 }
 
-func doCompositionBasedReports(settings *helpers.CompositionConfig, l logger.Logger) {
+func doCompositionBasedReports(settings *helpers.CompositionConfig, wl *helpers.Whitelist, l logger.Logger) {
 	l.Info("Reading Composition...")
 	cl, err := helpers.CompositionParser(settings, l)
 	helpers.Check(err, l, "Failed to generate container list")
 
 	for i := range cl {
-		_ = doSingleReport(cl[i], l)
+		_ = doSingleReport(cl[i], wl, l)
 	}
 
 }
 
-func doSingleReport(image ecr.Image, l logger.Logger) error {
+func doSingleReport(image ecr.Image, whitelist *helpers.Whitelist, l logger.Logger) error {
 	reporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(*image.RepositoryName), fmt.Sprintf("%s/", *reportDir), *reporterList)
 	n := fmt.Sprintf("%s:%s", *image.RepositoryName, *image.ImageId.ImageTag)
+
+	key := strings.TrimPrefix(*image.RepositoryName, fmt.Sprintf("%s/", *baseRepo))
+	compositeWhitelistedPackages := whitelist.GlobalPackages
+	if whitelist.ComponentPackages[key] != nil {
+		compositeWhitelistedPackages = append(compositeWhitelistedPackages, whitelist.ComponentPackages[key]...)
+	}
 
 	l.Info("Getting Results for container: ", n)
 	result, err := aggregator.EcrGetScanResults(image, l)
@@ -78,7 +88,7 @@ func doSingleReport(image ecr.Image, l logger.Logger) error {
 		if reporterConfig.ReporterType == "junit" {
 			l.Infof("Creating junit test report")
 
-			re := reporters.CreateXmlReport(*image.RepositoryName, *severityCutoff, *result.ImageScanFindings, reporterConfig, l)
+			re := reporters.CreateXmlReport(*image.RepositoryName, *severityCutoff, *result.ImageScanFindings, reporterConfig, &compositeWhitelistedPackages, l)
 			helpers.Check(re, l, "Failed to write report for %s", *containerName)
 		}
 	} else {
