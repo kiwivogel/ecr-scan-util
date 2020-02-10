@@ -86,8 +86,7 @@ func CompositionParser(s *CompositionConfig, l logger.Logger) ([]ecr.Image, erro
 	zdComposition := make(map[string]string)
 	imageList := make([]ecr.Image, 0)
 
-	l.Infof("trying to read container names and identifiers from %s", s.CompositionFileName)
-	yamlFile, err := ioutil.ReadFile(s.CompositionFileName)
+	yamlFile, err := fileReader(s.CompositionFileName, &l)
 	Check(err, l, "Failed to read file %s: %s", s.CompositionFileName, err)
 
 	l.Infof("unmarshalling contents of %s", s.CompositionFileName)
@@ -163,4 +162,9 @@ func prefixStripper(input string, prefix string) (output string) {
 
 func underscoreHyphenator(input string) (output string) {
 	return strings.Replace(input, "_", "-", -1)
+}
+
+func fileReader(filename string, l *logger.Logger) ([]byte, error) {
+	l.Infof("trying to read contents of %s", filename)
+	return ioutil.ReadFile(filename)
 }

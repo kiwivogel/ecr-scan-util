@@ -44,14 +44,15 @@ type JUnitSkipped struct {
 	XMLName xml.Name `xml:"skipped"`
 }
 
-func CreateXmlReport(container string, cutoff string, findings ecr.ImageScanFindings, config helpers.ReporterConfig, l logger.Logger) (err error) {
-	s := newTestSuite(container, cutoff, findings)
+func CreateXmlReport(container string, cutoff string, findings ecr.ImageScanFindings, config helpers.ReporterConfig, whitelist *[]string, l logger.Logger) (err error) {
+
+	s := newTestSuite(container, cutoff, findings, whitelist)
 	we := xmlReportWriter(config, s, l)
 	helpers.Check(we, l, "Failed to write file.\n")
 	return err
 }
 
-func newTestSuite(container string, cutoff string, findings ecr.ImageScanFindings) (testSuite JUnitTestSuite) {
+func newTestSuite(container string, cutoff string, findings ecr.ImageScanFindings, whitelist *[]string) (testSuite JUnitTestSuite) {
 	testSuite = JUnitTestSuite{
 		XMLName:   xml.Name{container, "bla"},
 		TestCases: nil,
@@ -62,7 +63,7 @@ func newTestSuite(container string, cutoff string, findings ecr.ImageScanFinding
 		Time:      0,
 	}
 	for f := range findings.Findings {
-		testSuite.TestCases = append(testSuite.TestCases, createTestCase(cutoff, container, *findings.Findings[f]))
+		testSuite.TestCases = append(testSuite.TestCases, createTestCase(cutoff, container, *findings.Findings[f], whitelist))
 	}
 	return testSuite
 }
@@ -105,15 +106,16 @@ func hasPassedCutoff(cutoff string, severity string) bool {
 	return !(severityMap[severity] >= severityMap[cutoff])
 }
 
-func createTestCase(cutoff string, container string, finding ecr.ImageScanFinding) (testCase JUnitTestCase) {
+func createTestCase(cutoff string, container string, finding ecr.ImageScanFinding, whitelist *[]string) (testCase JUnitTestCase) {
 	passed := hasPassedCutoff(cutoff, *finding.Severity)
-
-	whitelisted := false
-	query := "bestaatniet"
 
 	packageName, err := helpers.ExtractPackageAttributes("package_name", &finding)
 	packageVersion, err := helpers.ExtractPackageAttributes("package_version", &finding)
+
 	packageString := fmt.Sprintf("%s@%s", packageName, packageVersion)
+
+	whitelisted, hit := helpers.InWhiteList(*whitelist, packageString)
+
 	if err != nil {
 		panic(err)
 	}
@@ -124,18 +126,17 @@ func createTestCase(cutoff string, container string, finding ecr.ImageScanFindin
 		Time:      0,
 		SystemOut: "",
 	}
-	if passed {
+	if whitelisted {
+		testCase.PassedMessage = newGenericPassedMessage("Vulnerability %s with severity %s matches queried pattern %s. PASSED!",
+			*finding.Name, *finding.Severity, hit)
+		return testCase
+	} else if passed {
 		testCase.PassedMessage = newGenericPassedMessage("Vulnerability %s with severity %s below cutoff %s. PASSED!",
 			*finding.Name, *finding.Severity, cutoff)
 	} else {
-		if !whitelisted {
-			testCase.FailureMessage = newGenericFailedMessage(*finding.Severity,
-				"Vulnerability %s of severity %s above cutoff %s. FAILED! Description: %s",
-				*finding.Name, *finding.Severity, cutoff, helpers.StringPointerChecker(finding.Description, "No description provided"))
-		} else {
-			testCase.PassedMessage = newGenericPassedMessage("Vulnerability %s with severity %s matches queried pattern %s. PASSED!",
-				*finding.Name, *finding.Severity, query)
-		}
+		testCase.FailureMessage = newGenericFailedMessage(*finding.Severity,
+			"Vulnerability %s of severity %s above cutoff %s. FAILED! Description: %s",
+			*finding.Name, *finding.Severity, cutoff, helpers.StringPointerChecker(finding.Description, "No description provided"))
 	}
 	return testCase
 }
