@@ -127,7 +127,7 @@ func createTestCase(cutoff string, container string, finding ecr.ImageScanFindin
 		SystemOut: "",
 	}
 	if whitelisted {
-		testCase.PassedMessage = newGenericPassedMessage("Vulnerability %s with severity %s matches queried pattern %s. PASSED!",
+		testCase.PassedMessage = newGenericPassedMessage("Vulnerability %s with severity %s matches queried whitelisted pattern %s. PASSED!",
 			*finding.Name, *finding.Severity, hit)
 		return testCase
 	} else if passed {
