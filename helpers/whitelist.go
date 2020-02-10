@@ -25,15 +25,6 @@ func CreateWhitelist(whitelistFile string, l logger.Logger) (whitelist Whitelist
 	return whitelist, err
 }
 
-func whitelistParser(data []byte) (Whitelist, error) {
-
-	wl := new(Whitelist)
-
-	err := yaml.Unmarshal(data, wl)
-
-	return *wl, err
-}
-
 func InWhiteList(list []string, query string) (found bool, hit string) {
 	for v := range list {
 		if strings.HasPrefix(query, list[v]) {
@@ -41,4 +32,13 @@ func InWhiteList(list []string, query string) (found bool, hit string) {
 		}
 	}
 	return false, "none"
+}
+
+func whitelistParser(data []byte) (Whitelist, error) {
+
+	wl := new(Whitelist)
+
+	err := yaml.Unmarshal(data, wl)
+
+	return *wl, err
 }
