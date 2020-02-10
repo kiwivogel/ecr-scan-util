@@ -25,6 +25,14 @@ func CreateWhitelist(whitelistFile string, l logger.Logger) (whitelist Whitelist
 	return whitelist, err
 }
 
+func FlattenWhitelist(w *Whitelist, c string) (whitelist []string) {
+	whitelist = w.GlobalPackages
+	if w.ComponentPackages[c] != nil {
+		whitelist = append(whitelist, w.ComponentPackages[c]...)
+	}
+	return whitelist
+}
+
 func InWhiteList(list []string, query string) (found bool, hit string) {
 	for v := range list {
 		if strings.HasPrefix(query, list[v]) {

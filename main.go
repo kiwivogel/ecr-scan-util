@@ -73,11 +73,9 @@ func doSingleReport(image ecr.Image, whitelist *helpers.Whitelist, l logger.Logg
 	reporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(*image.RepositoryName), fmt.Sprintf("%s/", *reportDir), *reporterList)
 	n := fmt.Sprintf("%s:%s", *image.RepositoryName, *image.ImageId.ImageTag)
 
-	key := strings.TrimPrefix(*image.RepositoryName, fmt.Sprintf("%s/", *baseRepo))
-	compositeWhitelistedPackages := whitelist.GlobalPackages
-	if whitelist.ComponentPackages[key] != nil {
-		compositeWhitelistedPackages = append(compositeWhitelistedPackages, whitelist.ComponentPackages[key]...)
-	}
+	// Flatten global whitelist and component specific whitelist into a single array.
+	// We convert repositoryName back into base name to keep whitelist readable
+	componentWhitelist := helpers.FlattenWhitelist(whitelist, strings.TrimPrefix(*image.RepositoryName, fmt.Sprintf("%s/", *baseRepo)))
 
 	l.Info("Getting Results for container: ", n)
 	result, err := aggregator.EcrGetScanResults(image, l)
@@ -88,7 +86,7 @@ func doSingleReport(image ecr.Image, whitelist *helpers.Whitelist, l logger.Logg
 		if reporterConfig.ReporterType == "junit" {
 			l.Infof("Creating junit test report")
 
-			re := reporters.CreateXmlReport(*image.RepositoryName, *severityCutoff, *result.ImageScanFindings, reporterConfig, &compositeWhitelistedPackages, l)
+			re := reporters.CreateXmlReport(*image.RepositoryName, *severityCutoff, *result.ImageScanFindings, reporterConfig, &componentWhitelist, l)
 			helpers.Check(re, l, "Failed to write report for %s", *containerName)
 		}
 	} else {
