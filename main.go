@@ -15,6 +15,7 @@ import (
 
 var (
 	registryId = kingpin.Flag("repository", "Aws ecr repository id. Uses default when omitted.").Envar("ESU_ECR_REGISTRY_ID").Default("").String()
+	allRepos   = kingpin.Flag("check-all", "Get scan results for all repositories in the registry").Default("false").Bool()
 	// The following Options are used together to parse a composition file in yaml format.
 	composition   = kingpin.Flag("composition", "ZD Composition file to load when running batch mode.").Envar("ESU_COMPOSITION_FILE").Default("").String()
 	whitelistfile = kingpin.Flag("whitelist", "Whitelist file containing package substrings to ignore per image and/or globally").Envar("ESU_WHITELIST_FILE").Default("").String()
@@ -35,11 +36,10 @@ var (
 )
 
 func main() {
-
-	kingpin.Parse()
-
 	L := logger.Init("ESU Logger", *verbose, false, ioutil.Discard)
 	logger.SetFlags(log.LUTC)
+
+	kingpin.Parse()
 
 	whitelist, err := helpers.CreateWhitelist(*whitelistfile, *L)
 	helpers.Check(err, *L, "Failed to return whitelist.")
@@ -47,6 +47,10 @@ func main() {
 	if *composition != "" {
 		config := helpers.NewDefaultCompositionConfig(composition, baseRepo, stripPrefix, stripSuffix)
 		doCompositionBasedReports(&config, &whitelist, *L)
+	} else if *allRepos {
+		list, err := helpers.GetEcrRepositories(registryId)
+		helpers.Check(err, *L)
+		fmt.Printf("%v", list)
 
 	} else {
 		repositoryName := strings.Join([]string{*baseRepo, *containerName}, "/")
@@ -55,7 +59,6 @@ func main() {
 
 		_ = doSingleReport(image, &whitelist, *L)
 	}
-
 }
 
 func doCompositionBasedReports(settings *helpers.CompositionConfig, wl *helpers.Whitelist, l logger.Logger) {

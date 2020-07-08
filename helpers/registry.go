@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -8,7 +9,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 )
 
-func GetEcrRepositories(registryID *string) (repositoryList []*ecr.Repository, err error) {
+func GetLatestImage(registryID *string, repository *ecr.Repository) (container *ecr.Image, err error) {
+	input := createListImagesInput(*repository)
+	svc := ecr.New(session.New())
+	output, err := svc.ListImagesRequest(input)
+
+}
+
+func GetEcrRepositories(registryID *string) (repositoryList *ecr.DescribeRepositoriesOutput, err error) {
 
 	input, _ := createDescribeRepositoriesInput(registryID) //Use default registry for now
 
@@ -35,7 +43,16 @@ func GetEcrRepositories(registryID *string) (repositoryList []*ecr.Repository, e
 		return
 	}
 
-	return result.Repositories, err
+	return result, err
+}
+
+func getRepositoryList(I *ecr.DescribeRepositoriesOutput) ([]*ecr.Repository, error) {
+	if len(I.Repositories) > 0 {
+		return I.Repositories, nil
+	} else {
+		return nil, errors.New("No repositories found")
+	}
+
 }
 
 func createDescribeRepositoriesInput(registryId *string) (input *ecr.DescribeRepositoriesInput, err error) {
@@ -48,4 +65,17 @@ func createDescribeRepositoriesInput(registryId *string) (input *ecr.DescribeRep
 		input.RegistryId = registryId
 	}
 	return input, err
+}
+
+func createListImagesInput(repository ecr.Repository) (input *ecr.ListImagesInput) {
+	input = &ecr.ListImagesInput{
+		Filter:         &ecr.ListImagesFilter{TagStatus: aws.String("TAGGED")},
+		MaxResults:     aws.Int64(1000),
+		NextToken:      nil,
+		RepositoryName: repository.RepositoryName,
+	}
+	if repository.RegistryId != nil {
+		input.RegistryId = repository.RegistryId
+	}
+	return input
 }
