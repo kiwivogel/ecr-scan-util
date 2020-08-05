@@ -1,6 +1,6 @@
 library 'jenkins-shared-library@master'
 
-pipeline_component_eks(
+pipeline_component(
     pipeline_libraries: [
         [library: lib_custom_build_script, config: [build_tool: 'golang']]
     ],
