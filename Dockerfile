@@ -33,8 +33,6 @@ FROM  alpine
 RUN mkdir /user && \
     echo 'nobody:x:65534:65534:nobody:/:' > /user/passwd && \
     echo 'nobody:x:65534:' > /user/group && \
-    echo 'jenkins:x:1000:1000:jenkins:/:' > /user/passwd && \
-    echo 'jenkins:x:jenkins:' > /user/group && \
     apk add --no-cache ca-certificates tzdata
 
 COPY --chown=0:0 --from=builder /dist /
@@ -43,7 +41,7 @@ COPY --chown=0:0 --from=builder /dist /
 # User ID 65534 is usually user 'nobody'.
 # The executor of this image should still specify a user during setup.
 COPY --chown=65534:0 --from=builder /data /data
-USER 1000
+USER 65534
 WORKDIR /data
 
 ENTRYPOINT ["/ecr-scan-util"]
