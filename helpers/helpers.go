@@ -3,15 +3,16 @@ package helpers
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/google/logger"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/google/logger"
+	"gopkg.in/yaml.v2"
 )
 
 type ReporterConfig struct {

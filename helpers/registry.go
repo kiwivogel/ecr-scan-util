@@ -3,10 +3,12 @@ package helpers
 import (
 	"errors"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/google/logger"
 )
 
 func GetLatestImage(registryID *string, repository *ecr.Repository) (container *ecr.Image, err error) {

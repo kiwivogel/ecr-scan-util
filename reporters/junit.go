@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"encoding/xml"
 	"fmt"
+	"os"
+	"path"
+
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/google/logger"
 	"github.com/kiwivogel/ecr-scan-util/helpers"
-	"os"
-	"path"
 )
 
 type JUnitTestSuite struct {
