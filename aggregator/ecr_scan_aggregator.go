@@ -8,15 +8,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/google/logger"
+	"github.com/kiwivogel/ecr-scan-util/helpers"
 )
 
-var region = "eu-west-1"
-
-func EcrGetScanResults(image ecr.Image, l logger.Logger) (result *ecr.DescribeImageScanFindingsOutput, err error) {
-	s := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(region),
-	}))
-	svc := ecr.New(s)
+func EcrGetScanResults(image *ecr.Image, session *session.Session, l logger.Logger) (result *ecr.DescribeImageScanFindingsOutput, err error) {
+	helpers.Check(err, l)
+	svc := ecr.New(session)
 	input, err := createImageScanFindingsInput(image)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -54,7 +51,7 @@ func EcrGetScanResults(image ecr.Image, l logger.Logger) (result *ecr.DescribeIm
 	return result, err
 }
 
-func createImageScanFindingsInput(image ecr.Image) (input *ecr.DescribeImageScanFindingsInput, err error) {
+func createImageScanFindingsInput(image *ecr.Image) (input *ecr.DescribeImageScanFindingsInput, err error) {
 	input = &ecr.DescribeImageScanFindingsInput{
 		RepositoryName: image.RepositoryName,
 		ImageId:        image.ImageId,

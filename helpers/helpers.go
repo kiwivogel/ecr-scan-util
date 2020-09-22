@@ -28,14 +28,6 @@ type CompositionConfig struct {
 	StripSuffix         string
 }
 
-func NewDefaultReporterConfig() ReporterConfig {
-	return ReporterConfig{
-		ReportFileName: "testreport.xml",
-		ReporterType:   "junit",
-		ReportBaseDir:  "reports",
-	}
-}
-
 func NewDefaultCompositionConfig(compositionFile *string, baseRepo *string, stripPrefix *string, stripSuffix *string) CompositionConfig {
 	return CompositionConfig{
 		CompositionFileName: *compositionFile,
@@ -59,6 +51,13 @@ func NewCustomReporterConfig(filename string, basedir string, reporterType strin
 		ReportFileName: filename,
 		ReportBaseDir:  basedir,
 		ReporterType:   reporterType,
+	}
+}
+
+func NewDefaultAwsConfig() aws.Config {
+
+	return aws.Config{
+		Region: aws.String("eu-west-1"),
 	}
 }
 
