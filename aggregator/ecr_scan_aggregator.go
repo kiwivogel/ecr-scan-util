@@ -11,7 +11,7 @@ import (
 	"github.com/kiwivogel/ecr-scan-util/helpers"
 )
 
-func EcrGetScanResults(image *ecr.Image, session *session.Session, l logger.Logger) (result *ecr.DescribeImageScanFindingsOutput, err error) {
+func EcrGetScanResults(image *ecr.Image, session *session.Session, l *logger.Logger) (result *ecr.DescribeImageScanFindingsOutput, err error) {
 	helpers.Check(err, l)
 	svc := ecr.New(session)
 	input, err := createImageScanFindingsInput(image)
@@ -57,7 +57,7 @@ func createImageScanFindingsInput(image *ecr.Image) (input *ecr.DescribeImageSca
 		ImageId:        image.ImageId,
 		MaxResults:     aws.Int64(1000), //to avoid paginated results with more than 100 but less than 1000 results.
 	}
-	if *image.RegistryId != "" {
+	if image.RegistryId != nil {
 		input.RegistryId = image.RegistryId
 	}
 	return input, err

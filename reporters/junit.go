@@ -45,7 +45,7 @@ type JUnitSkipped struct {
 	XMLName xml.Name `xml:"skipped"`
 }
 
-func CreateXmlReport(container string, cutoff string, findings ecr.ImageScanFindings, config helpers.ReporterConfig, whitelist *[]string, l logger.Logger) (err error) {
+func CreateXmlReport(container string, cutoff string, findings ecr.ImageScanFindings, config helpers.ReporterConfig, whitelist *[]string, l *logger.Logger) (err error) {
 
 	s := newTestSuite(container, cutoff, findings, whitelist)
 	we := xmlReportWriter(config, s, l)
@@ -155,7 +155,7 @@ func newGenericFailedMessage(severity string, template string, m ...interface{})
 	}
 }
 
-func xmlReportWriter(config helpers.ReporterConfig, suite JUnitTestSuite, l logger.Logger) (err error) {
+func xmlReportWriter(config helpers.ReporterConfig, suite JUnitTestSuite, l *logger.Logger) (err error) {
 
 	var filepath = path.Join(config.ReportBaseDir, config.ReportFileName)
 
@@ -187,7 +187,7 @@ func xmlReportWriter(config helpers.ReporterConfig, suite JUnitTestSuite, l logg
 	return err
 }
 
-func closeFile(file *os.File, l logger.Logger) {
+func closeFile(file *os.File, l *logger.Logger) {
 	err := file.Close()
 	helpers.CheckAndExit(err, l, "Failed to close file : %v", file, err)
 }

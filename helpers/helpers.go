@@ -36,12 +36,12 @@ func NewDefaultCompositionConfig(compositionFile *string, baseRepo *string, stri
 		StripSuffix:         *stripSuffix,
 	}
 }
-func NewImageDefinition(repositoryName string, imageTag string) (image ecr.Image) {
+func NewImageDefinition(registryID *string, repositoryName string, imageTag string) (image ecr.Image) {
 	return ecr.Image{
 		ImageId: &ecr.ImageIdentifier{
 			ImageTag: &imageTag,
 		},
-		RegistryId:     aws.String(""),
+		RegistryId:     registryID,
 		RepositoryName: aws.String(repositoryName),
 	}
 }
@@ -54,10 +54,10 @@ func NewCustomReporterConfig(filename string, basedir string, reporterType strin
 	}
 }
 
-func NewDefaultAwsConfig() aws.Config {
+func NewDefaultAwsConfig(region *string) aws.Config {
 
 	return aws.Config{
-		Region: aws.String("eu-west-1"),
+		Region: region,
 	}
 }
 
@@ -66,19 +66,20 @@ type GlobalConfig struct {
 	ReporterConfig ReporterConfig
 }
 
-func Check(e error, logger logger.Logger, a ...interface{}) {
+func Check(e error, logger *logger.Logger, a ...interface{}) {
 	if e != nil {
 		logger.Error(a)
 		panic(e)
 	}
 }
-func CheckAndExit(e error, logger logger.Logger, a ...interface{}) {
+
+func CheckAndExit(e error, logger *logger.Logger, a ...interface{}) {
 	if e != nil {
 		logger.Fatal(a)
 		os.Exit(1)
 	}
 }
-func CompositionParser(s *CompositionConfig, l logger.Logger) ([]ecr.Image, error) {
+func CompositionParser(s *CompositionConfig, r *string, l *logger.Logger) ([]ecr.Image, error) {
 	// This takes the configuration file (as passed via struct) and returns a list of generic
 	// container objects that can be used as input when interacting with the ECR endpoints.
 	// Currently only uses tag identifiers. TODO: Abstract further to allow working with hashes.
@@ -86,7 +87,7 @@ func CompositionParser(s *CompositionConfig, l logger.Logger) ([]ecr.Image, erro
 	zdComposition := make(map[string]string)
 	imageList := make([]ecr.Image, 0)
 
-	yamlFile, err := fileReader(s.CompositionFileName, &l)
+	yamlFile, err := fileReader(s.CompositionFileName, l)
 	Check(err, l, "Failed to read file %s: %s", s.CompositionFileName, err)
 
 	l.Infof("unmarshalling contents of %s", s.CompositionFileName)
@@ -95,7 +96,7 @@ func CompositionParser(s *CompositionConfig, l logger.Logger) ([]ecr.Image, erro
 
 	for c, v := range zdComposition {
 		c = underscoreHyphenator(suffixStripper(prefixStripper(c, s.StripPrefix), s.StripSuffix))
-		image := NewImageDefinition(strings.Join([]string{s.BaseRepo, c}, "/"), v)
+		image := NewImageDefinition(r, strings.Join([]string{s.BaseRepo, c}, "/"), v)
 		imageList = append(imageList, image)
 	}
 
