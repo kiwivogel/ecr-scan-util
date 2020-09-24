@@ -23,14 +23,18 @@ func GetLatestTag(repository *ecr.Repository, filter *string, session *session.S
 	imagesWithTimestamp, err := getImageDetails(repository, imageIdentifiers, session, l)
 	//We're iterating over the Results of getImageDetails
 
-	imageAges := []time.Duration{}
+	var imageAges []time.Duration
+	var minAge time.Duration
 
 	var latestTag string
 	if len(imagesWithTimestamp) > 0 {
+
 		for image := range imagesWithTimestamp {
 			imageAges = append(imageAges, time.Since(*imagesWithTimestamp[image].ImagePushedAt))
 		}
-		minAge := imageAges[0]
+		if len(imageAges) > 0 {
+			minAge = imageAges[0]
+		}
 		for a := range imageAges {
 			if imageAges[a] < minAge {
 				minAge = imageAges[a]
