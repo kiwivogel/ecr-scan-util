@@ -1,9 +1,10 @@
 package helpers
 
 import (
+	"strings"
+
 	"github.com/google/logger"
 	"gopkg.in/yaml.v2"
-	"strings"
 )
 
 type Whitelist struct {
