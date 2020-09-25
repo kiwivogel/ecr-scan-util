@@ -17,21 +17,21 @@ import (
 )
 
 var (
-	verbose = kingpin.Flag("verbose", "log actions to stdout").Envar("ESU_VERBOSE_BOOL").Default("true").Bool()
+	verbose = kingpin.Flag("verbose", "log actions to stdout").Default("true").Bool()
 	//Generic settings used for setting up client
-	registryId      = kingpin.Flag("registry-id", "Aws ecr repository id. Uses default when omitted.").Envar("ESU_ECR_REGISTRY_ID").Default("").String()
-	baseRepo        = kingpin.Flag("base-repo", "Used when supplying image names with a common prefix").Envar("ESU_ECR_BASE_REPO").Default("").String()
-	region          = kingpin.Flag("region", "AWS region").Default("").String()
+	registryId      = kingpin.Flag("registry-id", "Aws ECR registry id. Uses default when omitted.").Default("").String()
+	baseRepo        = kingpin.Flag("base-repo", "Used when supplying image names with a common prefix").Default("").String()
+	region          = kingpin.Flag("region", "AWS region").Default("eu-west-1").String()
 	latestTag       = kingpin.Flag("latest-tag", "Get result for most recent tagged image for specified repo. Ignores version of supplied composition if present.").Default("false").Bool()
 	latestTagFilter = kingpin.Flag("latest-tag-filter", "Ignores tags containing this substring.").Default("").String()
 
-	reportCommand         = kingpin.Command("report", "Creates a report containing scan results from ECR's container scans")
-	reportDir             = reportCommand.Flag("output-dir", "Directory to write reports to").Envar("ESU_REPORT_DIR").Default("reports").String()
-	reportWhitelistFile   = reportCommand.Flag("whitelist", "Whitelist file containing package substrings to ignore per image and/or globally").Envar("ESU_WHITELIST_FILE").Default("").String()
-	reportServerityCutoff = reportCommand.Flag("cutoff", "Severity to count as failures").Envar("ESU_SEVERITY_CUTOFF").Default("MEDIUM").String()
-	reportReporters       = reportCommand.Flag("reporter", "Reporter(s) to use").Envar("ESU_REPORTERS").Default("junit").String()
+	reportCommand        = kingpin.Command("report", "Creates a report containing scan results from ECR's container scans")
+	reportDir            = reportCommand.Flag("output-dir", "Directory to write reports to").Default("reports").String()
+	reportWhitelistFile  = reportCommand.Flag("whitelist", "Whitelist file containing package substrings to ignore per image and/or globally").Default("").String()
+	reportSeverityCutoff = reportCommand.Flag("cutoff", "Severity to count as failures").Default("MEDIUM").String()
+	reportReporters      = reportCommand.Flag("reporter", "Reporter(s) to use").Default("junit").String()
 
-	reportAllCommand = reportCommand.Command("all", "Iterate over all repositories in a given registry. (Finds latest tagged container and returns reports.)\n")
+	reportAllCommand = reportCommand.Command("all", "Iterate over all repositories in a given registry. (Finds latest tagged container and returns reports.)")
 
 	reportSingleCommand       = reportCommand.Command("single", "Iterate over a single repository")
 	reportSingleContainerName = reportSingleCommand.Flag("image-id", "Container name to fetch scan results for").Default("").String()
@@ -158,7 +158,7 @@ func createReport(image *ecr.Image, whitelist *helpers.Whitelist, session *sessi
 		if reporterConfig.ReporterType == "junit" {
 			l.Infof("Creating junit test report")
 
-			re := reporters.CreateXmlReport(*image.RepositoryName, *reportServerityCutoff, *result.ImageScanFindings, reporterConfig, &componentWhitelist, l)
+			re := reporters.CreateXmlReport(*image.RepositoryName, *reportSeverityCutoff, *result.ImageScanFindings, reporterConfig, &componentWhitelist, l)
 			helpers.Check(re, l, "Failed to write report for %s:%s", image.RepositoryName, image.ImageId.ImageTag)
 		}
 	} else {
