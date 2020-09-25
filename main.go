@@ -86,7 +86,6 @@ func main() {
 		helpers.CheckAndExit(err, L)
 	}
 }
-
 func doReportAll(w *helpers.Whitelist, s *session.Session, l *logger.Logger) error {
 	//Grab all repo's
 	allRepositories, err := helpers.GetEcrRepositories(registryId, s, *l)
@@ -110,6 +109,11 @@ func doReportAll(w *helpers.Whitelist, s *session.Session, l *logger.Logger) err
 	}
 	return nil
 
+	if *baseRepo != "" {
+		image.RepositoryName = aws.String(strings.Join([]string{*baseRepo, *reportSingleContainerName}, "/"))
+
+	}
+	return createReport(&image, &whitelist, s, l)
 }
 
 func doReportSingle(whitelist helpers.Whitelist, s *session.Session, l *logger.Logger) (err error) {
@@ -128,15 +132,16 @@ func doReportSingle(whitelist helpers.Whitelist, s *session.Session, l *logger.L
 	return createReport(&image, &whitelist, s, l)
 }
 
-func doReportComposition(images []ecr.Image, whitelist *helpers.Whitelist, session *session.Session, l *logger.Logger) error {
+func doReportComposition(images []ecr.Image, whitelist *helpers.Whitelist, session *session.Session, l *logger.Logger) (err error) {
 	for i := range images {
 		if *latestTag {
-			images[i].ImageId.ImageTag, _ = helpers.GetLatestTag(&ecr.Repository{
+			images[i].ImageId.ImageTag, err = helpers.GetLatestTag(&ecr.Repository{
 				RepositoryName: images[i].RepositoryName,
 			}, latestTagFilter, session, l)
 		}
-		_ = createReport(&images[i], whitelist, session, l)
-
+		if err == nil {
+			_ = createReport(&images[i], whitelist, session, l)
+		}
 	}
 	return nil
 }

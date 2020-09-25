@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -17,12 +16,22 @@ func GetLatestTag(repository *ecr.Repository, filter *string, session *session.S
 	//We need to grab a list of tags/hashes to use as input for createGetLifecyclePolicyPreviewInput because the
 	//getLifecyclePolicyPreviewOutput is what actually contains the tag metadata (because reasons).
 	imageIdentifiers, err := listImageIdentifiers(repository, session, l)
+	if err != nil {
+		l.Error("Failed to retrieve list of images")
+		return nil, err
+	}
 	if *filter != "" {
 		imageIdentifiers, err = filterImageIdentifiers(imageIdentifiers, filter, l)
 	}
+	if err != nil {
+		l.Error("Failed to filter list of images")
+		return nil, err
+	}
 	imagesWithTimestamp, err := getImageDetails(repository, imageIdentifiers, session, l)
-	//We're iterating over the Results of getImageDetails
-
+	if err != nil {
+		l.Error("Failed to retieve list of image details")
+		return nil, err
+	}
 	var imageAges []time.Duration
 	var minAge time.Duration
 
@@ -76,20 +85,20 @@ func getImageDetails(repository *ecr.Repository, identifiers []*ecr.ImageIdentif
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ecr.ErrCodeServerException:
-				fmt.Println(ecr.ErrCodeServerException, aerr.Error())
+				l.Error(ecr.ErrCodeServerException, aerr.Error())
 			case ecr.ErrCodeImageNotFoundException:
-				fmt.Println(ecr.ErrCodeImageNotFoundException, aerr.Error())
+				l.Error(ecr.ErrCodeImageNotFoundException, aerr.Error())
 			case ecr.ErrCodeInvalidParameterException:
-				fmt.Println(ecr.ErrCodeInvalidParameterException, aerr.Error())
+				l.Error(ecr.ErrCodeInvalidParameterException, aerr.Error())
 			case ecr.ErrCodeRepositoryNotFoundException:
-				fmt.Println(ecr.ErrCodeRepositoryNotFoundException, aerr.Error())
+				l.Error(ecr.ErrCodeRepositoryNotFoundException, aerr.Error())
 			default:
-				fmt.Println(aerr.Error())
+				l.Error(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			l.Error(err.Error())
 		}
 	}
 	if describeImagesOutput != nil && describeImagesOutput.ImageDetails != nil && len(describeImagesOutput.ImageDetails) > 0 {
@@ -111,20 +120,21 @@ func listImageIdentifiers(repository *ecr.Repository, session *session.Session, 
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ecr.ErrCodeServerException:
-				fmt.Println(ecr.ErrCodeServerException, aerr.Error())
+				l.Error(ecr.ErrCodeServerException, aerr.Error())
 			case ecr.ErrCodeInvalidParameterException:
-				fmt.Println(ecr.ErrCodeInvalidParameterException, aerr.Error())
+				l.Error(ecr.ErrCodeInvalidParameterException, aerr.Error())
 			case ecr.ErrCodeRepositoryNotFoundException:
-				fmt.Println(ecr.ErrCodeRepositoryNotFoundException, aerr.Error())
+				l.Error(ecr.ErrCodeRepositoryNotFoundException, aerr.Error())
 			default:
-				fmt.Println(aerr.Error())
+				l.Error(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			l.Error(err.Error())
 		}
-		return
+		return nil, err
+
 	}
 	if len(listImageOutput.ImageIds) > 0 {
 		return listImageOutput.ImageIds, nil
@@ -149,20 +159,20 @@ func GetEcrRepositories(registryID *string, session *session.Session, l logger.L
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ecr.ErrCodeServerException:
-				fmt.Println(ecr.ErrCodeServerException, aerr.Error())
+				l.Error(ecr.ErrCodeServerException, aerr.Error())
 			case ecr.ErrCodeInvalidParameterException:
-				fmt.Println(ecr.ErrCodeInvalidParameterException, aerr.Error())
+				l.Error(ecr.ErrCodeInvalidParameterException, aerr.Error())
 			case ecr.ErrCodeRepositoryNotFoundException:
-				fmt.Println(ecr.ErrCodeRepositoryNotFoundException, aerr.Error())
+				l.Error(ecr.ErrCodeRepositoryNotFoundException, aerr.Error())
 			default:
-				fmt.Println(aerr.Error())
+				l.Error(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			l.Error(err.Error())
 		}
-		return
+		return nil, err
 	}
 	return getRepositoryList(result)
 }
