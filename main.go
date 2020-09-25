@@ -86,7 +86,6 @@ func main() {
 		helpers.CheckAndExit(err, L)
 	}
 }
-
 func doReportAll(w *helpers.Whitelist, s *session.Session, l *logger.Logger) error {
 	//Grab all repo's
 	allRepositories, err := helpers.GetEcrRepositories(registryId, s, *l)
@@ -110,6 +109,11 @@ func doReportAll(w *helpers.Whitelist, s *session.Session, l *logger.Logger) err
 	}
 	return nil
 
+	if *baseRepo != "" {
+		image.RepositoryName = aws.String(strings.Join([]string{*baseRepo, *reportSingleContainerName}, "/"))
+
+	}
+	return createReport(&image, &whitelist, s, l)
 }
 
 func doReportSingle(whitelist helpers.Whitelist, s *session.Session, l *logger.Logger) (err error) {

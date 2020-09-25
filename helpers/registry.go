@@ -134,6 +134,7 @@ func listImageIdentifiers(repository *ecr.Repository, session *session.Session, 
 			l.Error(err.Error())
 		}
 		return nil, err
+
 	}
 	if len(listImageOutput.ImageIds) > 0 {
 		return listImageOutput.ImageIds, nil
