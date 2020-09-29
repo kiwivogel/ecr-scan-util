@@ -13,6 +13,7 @@ import (
 )
 
 func GetLatestTag(repository *ecr.Repository, filter *string, session *session.Session, l *logger.Logger) (containerTag *string, err error) {
+
 	imageIdentifiers, err := listImageIdentifiers(repository, session, l)
 	if err != nil {
 		l.Error("Failed to retrieve list of images")
@@ -23,6 +24,7 @@ func GetLatestTag(repository *ecr.Repository, filter *string, session *session.S
 	}
 	if err != nil {
 		l.Errorf("Failed to filter list of images for %s", repository.RepositoryName)
+
 		return nil, err
 	}
 	imagesWithTimestamp, err := getImageDetails(repository, imageIdentifiers, session, l)
@@ -32,6 +34,7 @@ func GetLatestTag(repository *ecr.Repository, filter *string, session *session.S
 	}
 	var imageAges []time.Duration
 	var minAge time.Duration
+
 
 	if len(imagesWithTimestamp) > 0 {
 
@@ -52,6 +55,7 @@ func GetLatestTag(repository *ecr.Repository, filter *string, session *session.S
 
 		}
 		return imagesWithTimestamp[index].ImageTags[0], nil //return imagesWithTimestamp[blaat].ImageTags[0], nil
+
 	} else if len(imagesWithTimestamp) == 1 {
 		return imagesWithTimestamp[0].ImageTags[0], nil
 	} else {
@@ -135,6 +139,7 @@ func listImageIdentifiers(repository *ecr.Repository, session *session.Session, 
 			l.Error(err.Error())
 		}
 		return nil, err
+
 	}
 	if len(listImageOutput.ImageIds) > 0 {
 		return listImageOutput.ImageIds, nil

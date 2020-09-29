@@ -110,6 +110,7 @@ func doReportAll(w *helpers.Whitelist, s *session.Session, l *logger.Logger) err
 	}
 	return nil
 
+
 }
 
 func doReportSingle(whitelist helpers.Whitelist, s *session.Session, l *logger.Logger) (err error) {
