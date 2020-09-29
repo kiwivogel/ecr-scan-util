@@ -13,8 +13,6 @@ import (
 )
 
 func GetLatestTag(repository *ecr.Repository, filter *string, session *session.Session, l *logger.Logger) (containerTag *string, err error) {
-	//We need to grab a list of tags/hashes to use as input for createGetLifecyclePolicyPreviewInput because the
-	//getLifecyclePolicyPreviewOutput is what actually contains the tag metadata (because reasons).
 	imageIdentifiers, err := listImageIdentifiers(repository, session, l)
 	if err != nil {
 		l.Error("Failed to retrieve list of images")
@@ -24,7 +22,7 @@ func GetLatestTag(repository *ecr.Repository, filter *string, session *session.S
 		imageIdentifiers, err = filterImageIdentifiers(imageIdentifiers, filter, l)
 	}
 	if err != nil {
-		l.Error("Failed to filter list of images")
+		l.Errorf("Failed to filter list of images for %s", repository.RepositoryName)
 		return nil, err
 	}
 	imagesWithTimestamp, err := getImageDetails(repository, imageIdentifiers, session, l)
@@ -35,22 +33,25 @@ func GetLatestTag(repository *ecr.Repository, filter *string, session *session.S
 	var imageAges []time.Duration
 	var minAge time.Duration
 
-	var latestTag string
 	if len(imagesWithTimestamp) > 0 {
 
 		for image := range imagesWithTimestamp {
 			imageAges = append(imageAges, time.Since(*imagesWithTimestamp[image].ImagePushedAt))
 		}
-		if len(imageAges) > 0 {
-			minAge = imageAges[0]
+		//handle potential (but very unlikely) nil slice
+		if len(imageAges) == 0 {
+			return nil, errors.New("no imageage could be determined. Check metadata in console")
 		}
+		var index int
+
 		for a := range imageAges {
 			if imageAges[a] < minAge {
 				minAge = imageAges[a]
-				latestTag = *imagesWithTimestamp[a].ImageTags[0]
+				index = a
 			}
+
 		}
-		return &latestTag, nil
+		return imagesWithTimestamp[index].ImageTags[0], nil //return imagesWithTimestamp[blaat].ImageTags[0], nil
 	} else if len(imagesWithTimestamp) == 1 {
 		return imagesWithTimestamp[0].ImageTags[0], nil
 	} else {

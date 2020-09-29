@@ -1,8 +1,6 @@
 package aggregator
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -12,12 +10,10 @@ import (
 )
 
 func EcrGetScanResults(image *ecr.Image, session *session.Session, l *logger.Logger) (result *ecr.DescribeImageScanFindingsOutput, err error) {
-	helpers.Check(err, l)
 	svc := ecr.New(session)
 	input, err := createImageScanFindingsInput(image)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
+	helpers.Check(err, l)
+
 	result, err = svc.DescribeImageScanFindings(input)
 	if err != nil {
 		if err, ok := err.(awserr.Error); ok {
@@ -33,7 +29,7 @@ func EcrGetScanResults(image *ecr.Image, session *session.Session, l *logger.Log
 			case ecr.ErrCodeImageNotFoundException:
 				l.Warningf("%s", err.Error())
 			default:
-				fmt.Println(err.Error())
+				l.Error(err.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr. Error to get the Code and
