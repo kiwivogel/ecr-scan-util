@@ -23,7 +23,7 @@ Commands:
 
   common flags:
     --output-dir="reports"  Directory to write reports to
-    --whitelist=""          Whitelist file containing package substrings to ignore per image and/or globally
+    --allowlist=""          allowlist file containing package substrings to ignore per image and/or globally
     --cutoff="MEDIUM"       Severity cut off. Anything equal to or above is counted as a failures in the report
     --reporter="junit"      Reporter(s) to use, only JUnit for now.
 
@@ -54,14 +54,14 @@ yourcontainer: 'TAG'
 zd_somecontainer_version: 'TAG'
 ```
 
-### whitelist 
-Allows passing a whitelist with packages that you want to allow in your scan results. Mainly used because Claire includes 
-dummy kernel packages in results. Whitelisted packages can be supplied globally or on a per container basis in te following 
+### allowlist 
+Allows passing a allowlist with packages that you want to allow in your scan results. Mainly used because Claire includes 
+dummy kernel packages in results. allowlisted packages can be supplied globally or on a per container basis in te following 
 format.
 
-N.B (Whitelist entries are parsed with 'HasPrefix' for now. More elaborate logic could be added)
+N.B (allowlist entries are parsed with 'HasPrefix' for now. More elaborate logic could be added)
 ```yaml
-container_whitelist:
+container_allowlist:
   jenkins:
     - systemd@232-25+deb9u12
   somecontainer:
@@ -69,7 +69,7 @@ container_whitelist:
     - someotherpackage@someversion
   redis:
     - busybox
-global_whitelist:
+global_allowlist:
   - linux@4.9
 ```
 

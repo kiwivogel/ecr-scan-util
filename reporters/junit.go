@@ -115,7 +115,7 @@ func createTestCase(cutoff string, container string, finding ecr.ImageScanFindin
 
 	packageString := fmt.Sprintf("%s@%s", packageName, packageVersion)
 
-	whitelisted, hit := helpers.InWhiteList(*whitelist, packageString)
+	allowListed, hit := helpers.InAllowList(*whitelist, packageString)
 
 	if err != nil {
 		panic(err)
@@ -127,8 +127,8 @@ func createTestCase(cutoff string, container string, finding ecr.ImageScanFindin
 		Time:      0,
 		SystemOut: "",
 	}
-	if whitelisted {
-		testCase.PassedMessage = newGenericPassedMessage("Vulnerability %s with severity %s matches queried whitelisted pattern %s. PASSED!",
+	if allowListed {
+		testCase.PassedMessage = newGenericPassedMessage("Vulnerability %s with severity %s matches queried allowListed pattern %s. PASSED!",
 			*finding.Name, *finding.Severity, hit)
 		return testCase
 	} else if passed {

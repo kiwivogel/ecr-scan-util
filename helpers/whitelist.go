@@ -7,34 +7,34 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type Whitelist struct {
-	GlobalPackages    []string            `yaml:"global_whitelist"`
-	ComponentPackages map[string][]string `yaml:"container_whitelist"`
+type Allowlist struct {
+	GlobalPackages    []string            `yaml:"global_allowlist"`
+	ComponentPackages map[string][]string `yaml:"container_allowlist"`
 }
 
-func CreateWhitelist(whitelistFile string, l logger.Logger) (whitelist Whitelist, err error) {
-	if whitelistFile != "" {
+func CreateAllowlist(allowListFile string, l logger.Logger) (allowlist Allowlist, err error) {
+	if allowListFile != "" {
 		var wlBytes []byte
-		wlBytes, err = fileReader(whitelistFile, &l)
-		whitelist, err = whitelistParser(wlBytes)
+		wlBytes, err = fileReader(allowListFile, &l)
+		allowlist, err = allowlistParser(wlBytes)
 	} else {
-		whitelist = Whitelist{
+		allowlist = Allowlist{
 			GlobalPackages:    []string{},
 			ComponentPackages: map[string][]string{},
 		}
 	}
-	return whitelist, err
+	return allowlist, err
 }
 
-func FlattenWhitelist(w *Whitelist, c string) (whitelist []string) {
-	whitelist = w.GlobalPackages
-	if w.ComponentPackages[c] != nil {
-		whitelist = append(whitelist, w.ComponentPackages[c]...)
+func FlattenAllowlist(a *Allowlist, c string) (allowlist []string) {
+	allowlist = a.GlobalPackages
+	if a.ComponentPackages[c] != nil {
+		allowlist = append(allowlist, a.ComponentPackages[c]...)
 	}
-	return whitelist
+	return allowlist
 }
 
-func InWhiteList(list []string, query string) (found bool, hit string) {
+func InAllowList(list []string, query string) (found bool, hit string) {
 	for v := range list {
 		if strings.HasPrefix(query, list[v]) {
 			return true, list[v]
@@ -43,11 +43,11 @@ func InWhiteList(list []string, query string) (found bool, hit string) {
 	return false, "none"
 }
 
-func whitelistParser(data []byte) (Whitelist, error) {
+func allowlistParser(data []byte) (Allowlist, error) {
 
-	wl := new(Whitelist)
+	al := new(Allowlist)
 
-	err := yaml.Unmarshal(data, wl)
+	err := yaml.Unmarshal(data, al)
 
-	return *wl, err
+	return *al, err
 }
