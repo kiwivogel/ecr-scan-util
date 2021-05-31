@@ -47,13 +47,15 @@ type JUnitSkipped struct {
 
 func CreateXmlReport(container string, cutoff string, findings ecr.ImageScanFindings, config helpers.ReporterConfig, whitelist *[]string, l *logger.Logger) (err error) {
 
-	s := newTestSuite(container, cutoff, findings, whitelist)
+func CreateXmlReport(container string, cutoff string, findings ecr.ImageScanFindings, config helpers.ReporterConfig, allowList *[]string, l *logger.Logger) (err error) {
+
+	s := newTestSuite(container, cutoff, findings, allowList)
 	we := xmlReportWriter(config, s, l)
 	helpers.Check(we, l, "Failed to write file.\n")
 	return err
 }
 
-func newTestSuite(container string, cutoff string, findings ecr.ImageScanFindings, whitelist *[]string) (testSuite JUnitTestSuite) {
+func newTestSuite(container string, cutoff string, findings ecr.ImageScanFindings, allowList *[]string) (testSuite JUnitTestSuite) {
 	testSuite = JUnitTestSuite{
 		XMLName:   xml.Name{container, "bla"},
 		TestCases: nil,
@@ -64,7 +66,7 @@ func newTestSuite(container string, cutoff string, findings ecr.ImageScanFinding
 		Time:      0,
 	}
 	for f := range findings.Findings {
-		testSuite.TestCases = append(testSuite.TestCases, createTestCase(cutoff, container, *findings.Findings[f], whitelist))
+		testSuite.TestCases = append(testSuite.TestCases, createTestCase(cutoff, container, *findings.Findings[f], allowList))
 	}
 	return testSuite
 }
