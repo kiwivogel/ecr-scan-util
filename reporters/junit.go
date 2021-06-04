@@ -127,6 +127,7 @@ func hasPassedCutoff(cutoff string, severity string) bool {
 
 // createTestCase converts a ecr.ImageScanFinding to an annotated JUnitTestCase
 // takes a cutoff (either 'LOW', 'MEDIUM', 'HIGH' or 'CRITICAL') container (name), ecr.ImageScanFinding and an allowList
+// TODO: Handle errors. (Not likely but possible if something is wrong with the data supplied by aws)
 func createTestCase(cutoff string, container string, finding ecr.ImageScanFinding, allowList *[]string) (testCase JUnitTestCase) {
 	passed := hasPassedCutoff(cutoff, *finding.Severity)
 
