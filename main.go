@@ -79,7 +79,7 @@ func main() {
 		helpers.CheckAndExit(err, L)
 
 	case reportCompositionCommand.FullCommand():
-		config := helpers.NewDefaultCompositionConfig(reportCompositionFile, baseRepo, reportCompisotionStripPrefix, reportCompositionStripSuffix)
+		config := helpers.NewCompositionConfig(reportCompositionFile, baseRepo, reportCompisotionStripPrefix, reportCompositionStripSuffix)
 		cl, err := helpers.CompositionParser(&config, registryId, L)
 		helpers.CheckAndExit(err, L, "Failed to Parse file to extract list of images to iterate on")
 		err = doReportComposition(cl, &allowlist, s, L)
@@ -143,7 +143,7 @@ func doReportComposition(images []ecr.Image, allowlist *helpers.Allowlist, sessi
 }
 
 func createReport(image *ecr.Image, allowlist *helpers.Allowlist, session *session.Session, l *logger.Logger) error {
-	reporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(*image.RepositoryName), fmt.Sprintf("%s/", *reportDir), *reportReporters)
+	reporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(*image.RepositoryName, "xml"), fmt.Sprintf("%s/", *reportDir), *reportReporters)
 	n := fmt.Sprintf("%s:%s", *image.RepositoryName, *image.ImageId.ImageTag)
 
 	// Flatten global allowlist and component specific allowlist into a single array.
