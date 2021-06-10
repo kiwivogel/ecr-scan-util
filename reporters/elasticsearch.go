@@ -2,6 +2,8 @@ package reporters
 
 import (
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/elastic/go-elasticsearch"
+	"github.com/google/logger"
 	"github.com/kiwivogel/ecr-scan-util/helpers"
 )
 
@@ -33,4 +35,20 @@ func CreateNewVulnerabilityReport(imageName string, imageTag string, finding *ec
 	} else {
 		return VulnerabilityReport{}, err
 	}
+}
+func createEsClientConfig() elasticsearch.Config {
+	return elasticsearch.Config{
+		Addresses: []string{
+			"http://localhost:9200",
+			"http://lolcahost:9201",
+		},
+	}
+}
+
+func createEsClient(l *logger.Logger) (es *elasticsearch.Client, err error) {
+	es, err = elasticsearch.NewClient(createEsClientConfig())
+	if err != nil {
+		return &elasticsearch.Client{}, err
+	}
+	return es, nil
 }
