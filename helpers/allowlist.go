@@ -7,6 +7,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Handles allowlist logic
+
 // Allowlist is a target struct we populate with values based on an allowlist yaml. To avoid a large list of duplicate entries
 // we use both Globally allowed packages and Image specific packages we allow.
 type Allowlist struct {

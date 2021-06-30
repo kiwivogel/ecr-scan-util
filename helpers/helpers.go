@@ -15,6 +15,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// contains a bunch of helper functions / structs / concepts that we need across packages.
+
 // ReporterConfig is a simple object we use to avoid parameter bloat
 type ReporterConfig struct {
 	ReportFileName string // ReportFileName: What filename to use when writing out the report file (if applicable), Liable to change when more reporters are added
