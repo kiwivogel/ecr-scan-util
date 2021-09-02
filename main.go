@@ -27,7 +27,7 @@ var (
 
 	reportCommand        = kingpin.Command("report", "Creates a report containing scan results from ECR's container scans")
 	reportDir            = reportCommand.Flag("output-dir", "Directory to write reports to").Default("reports").String()
-	reportWhitelistFile  = reportCommand.Flag("whitelist", "Whitelist file containing package substrings to ignore per image and/or globally").Default("").String()
+	reportAllowlistFile  = reportCommand.Flag("allowlist", "Allowlist file containing package substrings to ignore per image and/or globally").Default("").String()
 	reportSeverityCutoff = reportCommand.Flag("cutoff", "Severity to count as failures").Default("MEDIUM").String()
 	reportReporters      = reportCommand.Flag("reporter", "Reporter(s) to use").Default("junit").String()
 
@@ -56,9 +56,9 @@ func main() {
 	L := logger.Init("ESU Logger", *verbose, false, ioutil.Discard)
 	logger.SetFlags(log.LUTC)
 
-	//Load and create optional whitelist
-	whitelist, err := helpers.CreateWhitelist(*reportWhitelistFile, *L)
-	helpers.Check(err, L, "Failed to return whitelist.")
+	//Load and create optional allowlist
+	allowlist, err := helpers.CreateAllowlist(*reportAllowlistFile, *L)
+	helpers.Check(err, L, "Failed to return allowlist.")
 
 	//Configuring and creating shared session
 	awsConfig := helpers.NewDefaultAwsConfig(region)
@@ -71,23 +71,23 @@ func main() {
 	switch kingpin.Parse() {
 
 	case reportAllCommand.FullCommand():
-		err = doReportAll(&whitelist, s, L)
+		err = doReportAll(&allowlist, s, L)
 		helpers.CheckAndExit(err, L)
 
 	case reportSingleCommand.FullCommand():
-		err = doReportSingle(whitelist, s, L)
+		err = doReportSingle(allowlist, s, L)
 		helpers.CheckAndExit(err, L)
 
 	case reportCompositionCommand.FullCommand():
-		config := helpers.NewDefaultCompositionConfig(reportCompositionFile, baseRepo, reportCompisotionStripPrefix, reportCompositionStripSuffix)
+		config := helpers.NewCompositionConfig(reportCompositionFile, baseRepo, reportCompisotionStripPrefix, reportCompositionStripSuffix)
 		cl, err := helpers.CompositionParser(&config, registryId, L)
 		helpers.CheckAndExit(err, L, "Failed to Parse file to extract list of images to iterate on")
-		err = doReportComposition(cl, &whitelist, s, L)
+		err = doReportComposition(cl, &allowlist, s, L)
 		helpers.CheckAndExit(err, L)
 	}
 }
 
-func doReportAll(w *helpers.Whitelist, s *session.Session, l *logger.Logger) error {
+func doReportAll(w *helpers.Allowlist, s *session.Session, l *logger.Logger) error {
 	//Grab all repo's
 	allRepositories, err := helpers.GetEcrRepositories(registryId, s, *l)
 	helpers.Check(err, l)
@@ -112,7 +112,7 @@ func doReportAll(w *helpers.Whitelist, s *session.Session, l *logger.Logger) err
 
 }
 
-func doReportSingle(whitelist helpers.Whitelist, s *session.Session, l *logger.Logger) (err error) {
+func doReportSingle(allowlist helpers.Allowlist, s *session.Session, l *logger.Logger) (err error) {
 	image := helpers.NewImageDefinition(registryId, *reportSingleContainerName, *reportSingleContainerTag)
 	if *latestTag == true {
 		image.ImageId.ImageTag, err = helpers.GetLatestTag(&ecr.Repository{
@@ -125,10 +125,10 @@ func doReportSingle(whitelist helpers.Whitelist, s *session.Session, l *logger.L
 		image.RepositoryName = aws.String(strings.Join([]string{*baseRepo, *reportSingleContainerName}, "/"))
 
 	}
-	return createReport(&image, &whitelist, s, l)
+	return createReport(&image, &allowlist, s, l)
 }
 
-func doReportComposition(images []ecr.Image, whitelist *helpers.Whitelist, session *session.Session, l *logger.Logger) (err error) {
+func doReportComposition(images []ecr.Image, allowlist *helpers.Allowlist, session *session.Session, l *logger.Logger) (err error) {
 	for i := range images {
 		if *latestTag {
 			images[i].ImageId.ImageTag, err = helpers.GetLatestTag(&ecr.Repository{
@@ -136,19 +136,19 @@ func doReportComposition(images []ecr.Image, whitelist *helpers.Whitelist, sessi
 			}, latestTagFilter, session, l)
 		}
 		if err == nil {
-			_ = createReport(&images[i], whitelist, session, l)
+			_ = createReport(&images[i], allowlist, session, l)
 		}
 	}
 	return nil
 }
 
-func createReport(image *ecr.Image, whitelist *helpers.Whitelist, session *session.Session, l *logger.Logger) error {
-	reporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(*image.RepositoryName), fmt.Sprintf("%s/", *reportDir), *reportReporters)
+func createReport(image *ecr.Image, allowlist *helpers.Allowlist, session *session.Session, l *logger.Logger) error {
+	reporterConfig := helpers.NewCustomReporterConfig(helpers.FileNameFormatter(*image.RepositoryName, "xml"), fmt.Sprintf("%s/", *reportDir), *reportReporters)
 	n := fmt.Sprintf("%s:%s", *image.RepositoryName, *image.ImageId.ImageTag)
 
-	// Flatten global whitelist and component specific whitelist into a single array.
-	// We convert repositoryName back into base name to keep whitelist readable
-	componentWhitelist := helpers.FlattenWhitelist(whitelist, strings.TrimPrefix(*image.RepositoryName, fmt.Sprintf("%s/", *baseRepo)))
+	// Flatten global allowlist and component specific allowlist into a single array.
+	// We convert repositoryName back into base name to keep allowlist readable
+	componentAllowlist := helpers.FlattenAllowlist(allowlist, strings.TrimPrefix(*image.RepositoryName, fmt.Sprintf("%s/", *baseRepo)))
 
 	l.Info("Getting Results for container: ", n)
 	result, err := aggregator.EcrGetScanResults(image, session, l)
@@ -159,7 +159,7 @@ func createReport(image *ecr.Image, whitelist *helpers.Whitelist, session *sessi
 		if reporterConfig.ReporterType == "junit" {
 			l.Infof("Creating junit test report")
 
-			re := reporters.CreateXmlReport(*image.RepositoryName, *reportSeverityCutoff, *result.ImageScanFindings, reporterConfig, &componentWhitelist, l)
+			re := reporters.CreateXmlReport(*image.RepositoryName, *reportSeverityCutoff, *result.ImageScanFindings, reporterConfig, &componentAllowlist, l)
 			helpers.Check(re, l, "Failed to write report for %s:%s", image.RepositoryName, image.ImageId.ImageTag)
 		}
 	} else {
